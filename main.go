@@ -2,7 +2,7 @@ package main
 
 
 import (
-	"github.com/tonychg/libgen-cli/cmd"
+	"gitlab/libgen-cli/cmd"
 	// "fmt"
 )
 
