@@ -17,11 +17,14 @@ package cmd
 import (
 	"os"
 	"log"
+	"fmt"
 	"strings"
 
+	"github.com/manifoldco/promptui"
 	"gitlab/libgen-cli/libgen"
 	"github.com/spf13/cobra"
 )
+
 
 // searchCmd represents the search command
 var searchCmd = &cobra.Command{
@@ -34,9 +37,40 @@ map urls to it, and show formated title + link`,
 			log.Fatal("Error: Search need a pattern for the command")
 			os.Exit(1)
 		}
-		search := strings.Join(args, " ")
-		log.Printf(" ++ Searching: %s\n", search)
-		libgen.RequestBooks(search)
+		pattern := strings.Join(args, " ")
+		log.Printf(" ++ Searching: %s\n", pattern)
+		// libgen.RequestBooks(search)
+
+		hashes := libgen.Search(pattern, 10)
+		var books []libgen.Book
+
+		books = libgen.GetDetails(hashes)
+
+		var books_title []string
+
+		for _, b := range books {
+			choice := fmt.Sprintf("[%s] %s", b.Id, b.Title)
+			books_title = append(books_title, choice)
+		}
+
+		prompt := promptui.Select{
+			Label: "Select Book",
+			Items: books_title,
+		}
+
+		_, result, err := prompt.Run()
+
+		if err != nil {
+			fmt.Printf("Prompt failed %v\n", err)
+			return
+		}
+
+		for i, b := range books_title {
+			if b == result {
+				downloadUrl := libgen.GetDownloadUrl(books[i])
+				libgen.DownloadBook(downloadUrl)
+			}
+		}
 	},
 }
 
