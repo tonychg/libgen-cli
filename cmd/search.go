@@ -49,8 +49,10 @@ map urls to it, and show formated title + link`,
 		var books_title []string
 
 		for _, b := range books {
-			choice := fmt.Sprintf("[%s] %s", b.Id, b.Title)
-			books_title = append(books_title, choice)
+			selectChoice := fmt.Sprintf("[%s] ", b.Id)
+			selectChoice += fmt.Sprintf("[%-4s] ", b.Extension)
+			selectChoice += fmt.Sprintf("%s", b.Title)
+			books_title = append(books_title, selectChoice)
 		}
 
 		prompt := promptui.Select{
@@ -65,12 +67,17 @@ map urls to it, and show formated title + link`,
 			return
 		}
 
+		var selected libgen.Book
+
 		for i, b := range books_title {
 			if b == result {
-				downloadUrl := libgen.GetDownloadUrl(books[i])
-				libgen.DownloadBook(downloadUrl)
+				selected = books[i]
+				break
 			}
 		}
+
+		libgen.GetDownloadUrl(&selected)
+		libgen.DownloadBook(selected)
 	},
 }
 

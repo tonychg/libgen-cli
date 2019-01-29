@@ -28,6 +28,7 @@ type Book struct {
 	Extension string
 	Md5 string
 	Year string
+	Url string
 }
 
 
@@ -128,7 +129,8 @@ func GetDetails(hashes []string) (books []Book) {
 				book := ParseResponse(b)
 				size, _ := strconv.Atoi(book.Filesize)
 				fmt.Printf("\n[%s] %s\n", book.Id, book.Title)
-				fmt.Printf("@year [%4s] - @author [%10s] ", book.Year, book.Author)
+				fmt.Printf("@year [%4s] - ", book.Year)
+				fmt.Printf("@author [%10s] ", book.Author)
 				fmt.Printf("@size [%8s] ", humanize.Bytes(uint64(size)))
 				fmt.Printf("@format [%4s]\n", book.Extension)
 				books = append(books, book)

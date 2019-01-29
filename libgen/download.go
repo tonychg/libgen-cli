@@ -11,9 +11,13 @@ import (
 	"io/ioutil"
 	"strings"
 	"os"
+	"io"
 	"log"
+	"fmt"
 	"regexp"
 	"path/filepath"
+
+	"gopkg.in/cheggaaa/pb.v1"
 )
 
 
@@ -27,11 +31,25 @@ const (
 )
 
 
+type WriteCounter struct {
+	Total uint64
+	Pb *pb.ProgressBar
+}
+
+
 type BookFile struct {
 	size int64
 	name string
 	path string
 	data []byte
+}
+
+
+func (wc *WriteCounter) Write(p []byte) (int, error) {
+	n := len(p)
+	wc.Total += uint64(n)
+	wc.Pb.Add64(int64(n))
+	return n, nil
 }
 
 
@@ -47,7 +65,7 @@ func GetHref(HttpResponse string) (href string) {
 }
 
 
-func GetDownloadUrl(book Book) (downloadUrl string) {
+func GetDownloadUrl(book *Book) error {
 	BaseUrl := &url.URL{
 		Scheme: "http",
 		Host: "booksdescr.org",
@@ -61,24 +79,24 @@ func GetDownloadUrl(book Book) (downloadUrl string) {
 	res, err := http.Get(BaseUrl.String())
 	if err != nil {
 		log.Printf("http.Get(%q) error: %v", BaseUrl, err)
-	} else {
-		defer res.Body.Close()
-
-		if res.StatusCode != http.StatusOK {
-			log.Printf("res.StatusCode = %d; want %d",
-				res.StatusCode,
-				http.StatusOK,
-			)
-		} else {
-			b, err := ioutil.ReadAll(res.Body)
-			if err != nil {
-				log.Printf("error reading resp body: %v", err)
-			} else {
-				downloadUrl = GetHref(string(b))
-			}
-		}
+		return err
 	}
-	return
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		log.Printf("res.StatusCode = %d; want %d",
+			res.StatusCode,
+			http.StatusOK,
+		)
+	} else {
+		b, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			log.Printf("error reading resp body: %v", err)
+			return err
+		}
+		book.Url = GetHref(string(b))
+	}
+	return nil
 }
 
 
@@ -101,29 +119,52 @@ func WriteFile(book BookFile, dest string) (bytes int) {
 }
 
 
-func DownloadBook(url string) (bytes int ) {
-	var bookfile BookFile
+func GetBookFilename(book Book) (filename string) {
+	var tmp []string
 
-	log.Printf("Downloading %s\n", url)
-	if res, err := http.Get(url); err == nil {
+	tmp = append(tmp, book.Title)
+	tmp = append(tmp, fmt.Sprintf(" (%s - %s)", book.Year, book.Author))
+	tmp = append(tmp, fmt.Sprintf(".%s", book.Extension))
+	filename = strings.Join(tmp, "")
+	fmt.Println(filename)
+	return
+}
+
+
+func DownloadBook(book Book) error {
+	var (
+		filename string
+		filesize int64
+		counter *WriteCounter
+	)
+
+	filename = GetBookFilename(book)
+	counter = &WriteCounter{}
+
+	log.Println("Download Started\n")
+	if res, err := http.Get(book.Url); err == nil {
 		if res.StatusCode == http.StatusOK {
 			defer res.Body.Close()
 
-			re := regexp.MustCompile("\".+\"")
+			filesize = res.ContentLength
 
-			filename := res.Header.Get("Content-Disposition")
-			filename = re.FindString(filename)
-
-			bookfile.size = res.ContentLength
-			bookfile.name = strings.Replace(filename, "\"", "", -1)
-
-			log.Printf("[OK] %s\n", bookfile.name)
-
-			if b, err := ioutil.ReadAll(res.Body); err == nil {
-				bookfile.data = b
-				bytes = WriteFile(bookfile, "./")
+			counter.Pb = pb.StartNew(int(filesize))
+			out, err := os.Create(filename + ".tmp")
+			if err != nil {
+				return err
 			}
+			defer out.Close()
+			_, err = io.Copy(out, io.TeeReader(res.Body, counter))
+			if err != nil {
+				return err
+			}
+			err = os.Rename(filename + ".tmp", filename)
+			if err != nil {
+				return err
+			}
+
+			log.Printf("[OK] %s\n", filename)
 		}
 	}
-	return
+	return nil
 }
