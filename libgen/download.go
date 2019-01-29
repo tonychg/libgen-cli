@@ -126,7 +126,6 @@ func GetBookFilename(book Book) (filename string) {
 	tmp = append(tmp, fmt.Sprintf(" (%s - %s)", book.Year, book.Author))
 	tmp = append(tmp, fmt.Sprintf(".%s", book.Extension))
 	filename = strings.Join(tmp, "")
-	fmt.Println(filename)
 	return
 }
 
@@ -141,15 +140,15 @@ func DownloadBook(book Book) error {
 	filename = GetBookFilename(book)
 	counter = &WriteCounter{}
 
-	log.Println("Download Started\n")
+	log.Println("Download Started")
 	if res, err := http.Get(book.Url); err == nil {
 		if res.StatusCode == http.StatusOK {
 			defer res.Body.Close()
 
 			filesize = res.ContentLength
-
 			counter.Pb = pb.StartNew(int(filesize))
 			out, err := os.Create(filename + ".tmp")
+
 			if err != nil {
 				return err
 			}

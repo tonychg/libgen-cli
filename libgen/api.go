@@ -11,11 +11,13 @@ import (
 	"io/ioutil"
 	"fmt"
 	"encoding/json"
+	"strings"
 	"strconv"
 	"regexp"
 	"log"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/dustin/go-humanize"
 )
 
@@ -40,7 +42,7 @@ func ParseHashes(response string) (hashes []string) {
 		re := regexp.MustCompile(SearchMD5)
 		hash := re.FindString(m)
 		if len(hash) == 32 {
-			log.Printf("Find hash %s\n", hash)
+			log.Printf("New hash found %s\n", hash)
 			hashes = append(hashes, hash)
 		}
 	}
@@ -118,8 +120,39 @@ func ParseResponse(data []byte) (book Book) {
 	return
 }
 
+func formatTitle(title string) (formatTitle string) {
+	var cache []string
+	var counter int
+
+	if len(title) < 60 {
+		return title
+	}
+
+	title = strings.TrimSpace(title)
+	for _, t := range strings.Split(title, " ") {
+		counter += len(t)
+
+		if counter > 60 {
+			counter = 0
+			t = t + "\n"
+		}
+		cache = append(cache, t)
+	}
+	formatTitle = strings.Join(cache, " ")
+
+	return
+}
+
+func pFormat(key string, value string, attr color.Attribute, align string) {
+	c := color.New(attr).SprintFunc()
+	a := fmt.Sprintf("%%%ss ", align)
+	s := fmt.Sprintf("@%s "+a, c(key), value)
+	fmt.Printf(a, s)
+}
 
 func GetDetails(hashes []string) (books []Book) {
+	var formatAuthor string
+
 	for _, md5 := range hashes {
 		apiurl := fmt.Sprintf("http://libgen.io/json.php?md5=%s", md5)
 		if r, err := http.Get(apiurl); err == nil {
@@ -128,11 +161,22 @@ func GetDetails(hashes []string) (books []Book) {
 			if b, err := ioutil.ReadAll(r.Body); err == nil {
 				book := ParseResponse(b)
 				size, _ := strconv.Atoi(book.Filesize)
-				fmt.Printf("\n[%s] %s\n", book.Id, book.Title)
-				fmt.Printf("@year [%4s] - ", book.Year)
-				fmt.Printf("@author [%10s] ", book.Author)
-				fmt.Printf("@size [%8s] ", humanize.Bytes(uint64(size)))
-				fmt.Printf("@format [%4s]\n", book.Extension)
+				fsize := humanize.Bytes(uint64(size))
+
+				fmt.Println(strings.Repeat("-", 80))
+				fTitle := fmt.Sprintf("%5s %s", book.Id, book.Title)
+				fTitle = formatTitle(fTitle)
+				fmt.Printf("%s\n    ++ ", fTitle)
+				if len(book.Author) > 25 {
+					formatAuthor = book.Author[:25]
+				} else {
+					formatAuthor = book.Author
+				}
+				pFormat("author", formatAuthor, color.FgYellow, "-25")
+				pFormat("year", book.Year, color.FgCyan, "4")
+				pFormat("size", fsize, color.FgGreen, "6")
+				pFormat("type", book.Extension, color.FgRed, "4")
+				fmt.Println()
 				books = append(books, book)
 			}
 		}

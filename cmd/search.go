@@ -20,38 +20,47 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/manifoldco/promptui"
 	"gitlab/libgen-cli/libgen"
+
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
 
+const MaxLength = 60
 
 // searchCmd represents the search command
 var searchCmd = &cobra.Command{
 	Use:   "search",
 	Short: "Search some pattern on libgen.io",
-	Long: `Search pattern and get a list of hash
-map urls to it, and show formated title + link`,
+	Long: `Search pattern and get a list of hash map urls to it, and show
+ formated title + link`,
 	Run: func(cmd *cobra.Command, args []string) {
+		var (
+			books []libgen.Book
+			books_title []string
+			subtitle string
+		)
+
 		if len(args) < 1 {
 			log.Fatal("Error: Search need a pattern for the command")
 			os.Exit(1)
 		}
+
 		pattern := strings.Join(args, " ")
 		log.Printf(" ++ Searching: %s\n", pattern)
-		// libgen.RequestBooks(search)
 
 		hashes := libgen.Search(pattern, 10)
-		var books []libgen.Book
-
 		books = libgen.GetDetails(hashes)
 
-		var books_title []string
-
 		for _, b := range books {
-			selectChoice := fmt.Sprintf("[%s] ", b.Id)
-			selectChoice += fmt.Sprintf("[%-4s] ", b.Extension)
-			selectChoice += fmt.Sprintf("%s", b.Title)
+			selectChoice := fmt.Sprintf("%8s ", b.Id)
+			selectChoice += fmt.Sprintf("%-4s ", b.Extension)
+			if len(b.Title) > MaxLength {
+				subtitle = b.Title[:MaxLength]
+			} else {
+				subtitle = b.Title
+			}
+			selectChoice += fmt.Sprintf("%s", subtitle)
 			books_title = append(books_title, selectChoice)
 		}
 
