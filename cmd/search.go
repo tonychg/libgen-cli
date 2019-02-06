@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"gitlab/libgen-cli/libgen"
+	"github.com/tonychg/libgen-cli/libgen"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
