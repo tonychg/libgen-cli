@@ -26,7 +26,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const MaxLength = 60
+const TitleMaxLength = 60
 
 // searchCmd represents the search command
 var searchCmd = &cobra.Command{
@@ -55,8 +55,8 @@ var searchCmd = &cobra.Command{
 		for _, b := range books {
 			selectChoice := fmt.Sprintf("%8s ", b.Id)
 			selectChoice += fmt.Sprintf("%-4s ", b.Extension)
-			if len(b.Title) > MaxLength {
-				subtitle = b.Title[:MaxLength]
+			if len(b.Title) > TitleMaxLength {
+				subtitle = b.Title[:TitleMaxLength]
 			} else {
 				subtitle = b.Title
 			}
