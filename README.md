@@ -12,3 +12,5 @@ go get -u github.com/TonyChG/libgen-cli
 ```
 libgen-cli search "kubernetes"
 ```
+
+![Example](https://github.com/TonyChG/libgen-cli/blob/master/resources/libgen-cli.example.gif)
