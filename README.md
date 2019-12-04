@@ -1,16 +1,17 @@
 ## Libgen - CLI
-> Author: TonyChG
+> Original Author: TonyChG  
+> Refactored and updated by Ryan Ciehanski
 
-### 1.0 Installation
+### Installation
 
 ```
-go get -u github.com/TonyChG/libgen-cli
+go get -u github.com/ciehanski/libgen-cli
 ```
 
-### 2.0 Usage
+### Usage
 
 ```
 libgen-cli search "kubernetes"
 ```
 
-![Example](https://github.com/TonyChG/libgen-cli/blob/master/resources/libgen-cli.example.gif)
+![Example](https://github.com/ciehanski/libgen-cli/blob/master/resources/libgen-cli.example.gif)
