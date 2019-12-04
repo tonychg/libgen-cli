@@ -1,75 +1,92 @@
-// Copyright 2012 The Go Authors.  All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// Copyright © 2019 Antoine Chiny <antoine.chiny@inria.fr>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package libgen
 
-
 import (
+	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
-	"io/ioutil"
-	"strings"
 	"os"
-	"io"
-	"log"
-	"fmt"
 	"regexp"
-	"path/filepath"
+	"strings"
 
-	"gopkg.in/cheggaaa/pb.v1"
+	"github.com/cheggaaa/pb/v3"
 )
 
+func DownloadBook(book Book) error {
+	var filesize int64
+	filename := getBookFilename(book)
 
-const (
-	SearchHref = "<a href='book/index.php.+</a>"
-	SearchId = "book/index\\.php\\?md5=\\w{32}"
-	SearchMD5 = "[A-Z0-9]{32}"
-	SearchTitle = ">[^<]+"
-	SearchUrl = "http://booksdl.org/get\\.php\\?md5=\\w{32}\\&key=\\w{16}"
-	NumberOfBooks = "10"
-)
+	log.Printf("Download started for %s\n", book.Title)
 
-
-type WriteCounter struct {
-	Total uint64
-	Pb *pb.ProgressBar
-}
-
-
-type BookFile struct {
-	size int64
-	name string
-	path string
-	data []byte
-}
-
-
-func (wc *WriteCounter) Write(p []byte) (int, error) {
-	n := len(p)
-	wc.Total += uint64(n)
-	wc.Pb.Add64(int64(n))
-	return n, nil
-}
-
-
-func GetHref(HttpResponse string) (href string) {
-	re := regexp.MustCompile(SearchUrl)
-	matchs := re.FindAllString(HttpResponse, -1)
-
-	if len(matchs) > 0 {
-		href = matchs[0]
+	err := getDownloadUrl(&book)
+	if err != nil {
+		return err
+	}
+	if book.Url == "" {
+		return fmt.Errorf("unable to retrieve download link for book")
 	}
 
-	return
+	res, err := http.Get(book.Url)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			// handle error
+		}
+	}()
+
+	if res.StatusCode == http.StatusOK {
+		filesize = res.ContentLength
+		bar := pb.Full.Start64(filesize)
+
+		out, err := os.Create(filename)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err := out.Close(); err != nil {
+				// handle err
+			}
+		}()
+
+		_, err = io.Copy(out, bar.NewProxyReader(res.Body))
+		if err != nil {
+			return err
+		}
+
+		bar.Finish()
+
+		log.Printf("[OK] %s\n", filename)
+	} else {
+		return fmt.Errorf("unable to reach mirror: %v", res.StatusCode)
+	}
+
+	return nil
 }
 
-
-func GetDownloadUrl(book *Book) error {
+func getDownloadUrl(book *Book) error {
+	var err error
 	BaseUrl := &url.URL{
 		Scheme: "http",
-		Host: "booksdescr.org",
-		Path: "ads.php",
+		Host:   "libgen.lc",
+		Path:   "ads.php",
 	}
 
 	q := BaseUrl.Query()
@@ -81,89 +98,40 @@ func GetDownloadUrl(book *Book) error {
 		log.Printf("http.Get(%q) error: %v", BaseUrl, err)
 		return err
 	}
-	defer res.Body.Close()
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			// handle error
+		}
+	}()
 
 	if res.StatusCode != http.StatusOK {
-		log.Printf("res.StatusCode = %d; want %d",
-			res.StatusCode,
-			http.StatusOK,
-		)
+		return fmt.Errorf("unable to connect to mirror: %v", res.StatusCode)
 	} else {
 		b, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			log.Printf("error reading resp body: %v", err)
 			return err
 		}
-		book.Url = GetHref(string(b))
+		book.Url = getHref(string(b))
 	}
+
 	return nil
 }
 
+func getHref(HttpResponse string) string {
+	re := regexp.MustCompile(searchUrl)
+	matches := re.FindAllString(HttpResponse, -1)
 
-func WriteFile(book BookFile, dest string) (bytes int) {
-	bytes = 0
-
-	log.Println("Start writing")
-	p := filepath.Join(dest, book.name)
-	if f, err := os.Create(p); err == nil {
-		defer f.Close()
-		if bytes, err = f.Write(book.data); err == nil {
-			log.Printf("%d written bytes\n", bytes)
-			f.Sync()
-			return
-		}
+	if len(matches) > 0 {
+		return matches[0]
+	} else {
+		return ""
 	}
-
-	log.Println("Fail to write new file\n")
-	return
 }
 
-
-func GetBookFilename(book Book) (filename string) {
+func getBookFilename(book Book) string {
 	var tmp []string
-
 	tmp = append(tmp, book.Title)
 	tmp = append(tmp, fmt.Sprintf(" (%s - %s)", book.Year, book.Author))
 	tmp = append(tmp, fmt.Sprintf(".%s", book.Extension))
-	filename = strings.Join(tmp, "")
-	return
-}
-
-
-func DownloadBook(book Book) error {
-	var (
-		filename string
-		filesize int64
-		counter *WriteCounter
-	)
-
-	filename = GetBookFilename(book)
-	counter = &WriteCounter{}
-
-	log.Println("Download Started")
-	if res, err := http.Get(book.Url); err == nil {
-		if res.StatusCode == http.StatusOK {
-			defer res.Body.Close()
-
-			filesize = res.ContentLength
-			counter.Pb = pb.StartNew(int(filesize))
-			out, err := os.Create(filename + ".tmp")
-
-			if err != nil {
-				return err
-			}
-			defer out.Close()
-			_, err = io.Copy(out, io.TeeReader(res.Body, counter))
-			if err != nil {
-				return err
-			}
-			err = os.Rename(filename + ".tmp", filename)
-			if err != nil {
-				return err
-			}
-
-			log.Printf("[OK] %s\n", filename)
-		}
-	}
-	return nil
+	return strings.Join(tmp, "")
 }
