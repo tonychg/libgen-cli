@@ -1,4 +1,3 @@
-
 name: libgen-cli-tagged-pr
 on: 
   pull_request:
@@ -43,4 +42,4 @@ jobs:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./libgen-cli
         asset_name: libgen-cli
-        asset_content_type: application/zip
+        asset_content_type: application/octet-stream
