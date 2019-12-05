@@ -1,5 +1,5 @@
 name: libgen-cli
-on: [push, pull_request]
+on: [pull_request]
 jobs:
   test:
     strategy:
@@ -16,7 +16,7 @@ jobs:
       uses: actions/checkout@v1
     - name: Install Dependencies
       run: go mod download
-    - name: Build
-      run: go build main.go
     - name: Test
       run: go test ./...
+    - name: Build
+      run: go build main.go
