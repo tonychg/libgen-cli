@@ -1,4 +1,4 @@
-name: libgen-cli-pr
+name: libgen-cli
 on: [push, pull_request]
 jobs:
   test:
