@@ -35,10 +35,22 @@ import (
 // then provides the web page's contents provided from the resulting http request
 // to the parseHashes() function to extract the specific hashes of matches
 // found from the search query provided.
-func Search(query string, results int) ([]string, error) {
+func Search(query string, results int, print bool, requireAuthor bool, extension string) ([]Book, error) {
 	searchMirror := getWorkingMirror(SearchMirrors)
 	if searchMirror.Host == "" {
-		log.Fatal("error: unable to reach any Library Genesis resources. Please try again later.")
+		return nil, errors.New("unable to reach any Library Genesis resources. Please try again later.")
+	}
+
+	// libgen search only allows query results of 25, 50 or 100.
+	// We handle that here
+	var res int
+	switch {
+	case results <= 25:
+		res = 25
+	case results <= 50:
+		res = 50
+	default:
+		res = 100
 	}
 
 	// Define URL with required query parameters
@@ -48,14 +60,13 @@ func Search(query string, results int) ([]string, error) {
 	q.Set("lg_topic", "libgen")
 	q.Set("open", "0")
 	q.Set("view", "simple")
-	q.Set("res", string(results))
+	q.Set("res", string(res))
 	q.Set("phrase", "1")
 	q.Set("column", "def")
 	searchMirror.RawQuery = q.Encode()
 
 	// Execute GET request on search query
 	r, err := http.Get(searchMirror.String())
-
 	if err != nil {
 		return nil, err
 	}
@@ -63,6 +74,7 @@ func Search(query string, results int) ([]string, error) {
 		return nil, err
 	}
 
+	// Read body of response to get HTML
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
@@ -73,13 +85,20 @@ func Search(query string, results int) ([]string, error) {
 		return nil, err
 	}
 
-	return parseHashes(string(b)), nil
+	hashes := parseHashes(string(b), results)
+
+	books, err := GetDetails(hashes, print, requireAuthor, extension)
+	if err != nil {
+		return nil, err
+	}
+
+	return books, nil
 }
 
 // GetDetails retrieves more details about a specific piece of media
 // based off of its unique hash/id. That information is then requested
 // in JSON format and sanitized in an array of Books.
-func GetDetails(hashes []string) ([]Book, error) {
+func GetDetails(hashes []string, print bool, requireAuthor bool, extension string) ([]Book, error) {
 	var (
 		books        []Book
 		formatAuthor string
@@ -97,7 +116,7 @@ func GetDetails(hashes []string) ([]Book, error) {
 		searchMirror.Path = "json.php"
 		q := searchMirror.Query()
 		q.Set("ids", hash)
-		q.Set("fields", JsonQuery)
+		q.Set("fields", JSONQuery)
 		searchMirror.RawQuery = q.Encode()
 
 		r, err := http.Get(searchMirror.String())
@@ -112,30 +131,44 @@ func GetDetails(hashes []string) ([]Book, error) {
 			return nil, err
 		}
 
-		book := parseResponse(b)
-		size, err := strconv.Atoi(book.Filesize)
+		book, err := parseResponse(b)
 		if err != nil {
-			fsize = "N/A"
-		} else {
-			fsize = humanize.Bytes(uint64(size))
+			return nil, err
 		}
 
-		fmt.Println(strings.Repeat("-", 80))
-		fTitle := fmt.Sprintf("%5s %s", color.New(color.FgHiBlue).Sprintf(book.Id), book.Title)
-		fTitle = formatTitle(fTitle)
-		fmt.Printf("%s\n    ++ ", fTitle)
-
-		if len(book.Author) > AuthorMaxLength {
-			formatAuthor = book.Author[:AuthorMaxLength]
-		} else {
-			formatAuthor = book.Author
+		// Flag filters
+		if requireAuthor && book.Author == "" {
+			continue
+		}
+		if extension != "" && extension != book.Extension {
+			continue
 		}
 
-		pFormat("author", formatAuthor, color.FgYellow, "-25")
-		pFormat("year", book.Year, color.FgCyan, "4")
-		pFormat("size", fsize, color.FgGreen, "6")
-		pFormat("type", book.Extension, color.FgRed, "4")
-		fmt.Println()
+		if print {
+			size, err := strconv.Atoi(book.Filesize)
+			if err != nil {
+				fsize = "N/A"
+			} else {
+				fsize = humanize.Bytes(uint64(size))
+			}
+
+			fmt.Println(strings.Repeat("-", 80))
+			fTitle := fmt.Sprintf("%5s %s", color.New(color.FgHiBlue).Sprintf(book.ID), book.Title)
+			fTitle = formatTitle(fTitle)
+			fmt.Printf("%s\n    ++ ", fTitle)
+
+			if len(book.Author) > AuthorMaxLength {
+				formatAuthor = book.Author[:AuthorMaxLength]
+			} else {
+				formatAuthor = book.Author
+			}
+
+			pFormat("author", formatAuthor, color.FgYellow, "-25")
+			pFormat("year", book.Year, color.FgCyan, "4")
+			pFormat("size", fsize, color.FgGreen, "6")
+			pFormat("type", book.Extension, color.FgRed, "4")
+			fmt.Println()
+		}
 
 		books = append(books, book)
 
@@ -151,49 +184,53 @@ func CheckMirror(url url.URL) int {
 	r, err := http.Get(url.String())
 	if err != nil || r.StatusCode != http.StatusOK {
 		return http.StatusBadGateway
-	} else {
-		return http.StatusOK
 	}
+
+	return http.StatusOK
 }
 
 func getWorkingMirror(urls []url.URL) url.URL {
 	var searchMirror url.URL
-	for _, mirrorUrl := range urls {
-		if CheckMirror(mirrorUrl) == http.StatusOK {
-			searchMirror = mirrorUrl
+	for _, mirrorURL := range urls {
+		if CheckMirror(mirrorURL) == http.StatusOK {
+			searchMirror = mirrorURL
 			break
 		}
 	}
 	return searchMirror
 }
 
-func parseHashes(response string) []string {
+func parseHashes(response string, results int) []string {
 	var hashes []string
 	re := regexp.MustCompile(SearchHref)
 	matches := re.FindAllString(response, -1)
 
+	var counter int
 	for _, m := range matches {
+		if counter >= results {
+			break
+		}
 		re := regexp.MustCompile(SearchMD5)
 		hash := re.FindString(m)
 		if len(hash) == 32 {
 			hashes = append(hashes, hash)
+			counter++
 		}
 	}
 
 	return hashes
 }
 
-// TODO: add error handling
-func parseResponse(data []byte) Book {
+func parseResponse(data []byte) (Book, error) {
 	var book Book
-	var formatedResp []map[string]string
+	var formattedResp []map[string]string
 
-	if err := json.Unmarshal(data, &formatedResp); err == nil {
-		for _, item := range formatedResp {
+	if err := json.Unmarshal(data, &formattedResp); err == nil {
+		for _, item := range formattedResp {
 			for k, v := range item {
 				switch k {
 				case "id":
-					book.Id = v
+					book.ID = v
 				case "title":
 					book.Title = v
 				case "author":
@@ -209,16 +246,11 @@ func parseResponse(data []byte) Book {
 				}
 			}
 		}
+	} else {
+		return Book{}, err
 	}
 
-	return book
-}
-
-func pFormat(key string, value string, col color.Attribute, align string) {
-	c := color.New(col).SprintFunc()
-	a := fmt.Sprintf("%%%ss ", align)
-	s := fmt.Sprintf("@%s "+a, c(key), value)
-	fmt.Printf(a, s)
+	return book, nil
 }
 
 func formatTitle(title string) string {
@@ -241,4 +273,11 @@ func formatTitle(title string) string {
 	}
 
 	return strings.Join(fTitle, " ")
+}
+
+func pFormat(key string, value string, col color.Attribute, align string) {
+	c := color.New(col).SprintFunc()
+	a := fmt.Sprintf("%%%ss ", align)
+	s := fmt.Sprintf("@%s "+a, c(key), value)
+	fmt.Printf(a, s)
 }

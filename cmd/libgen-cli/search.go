@@ -17,17 +17,23 @@ package libgen_cli
 
 import (
 	"fmt"
-	"github.com/fatih/color"
 	"log"
+	"os"
 	"strings"
 
-	"github.com/ciehanski/libgen-cli/libgen"
-
+	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
+
+	"github.com/ciehanski/libgen-cli/libgen"
 )
 
-var resultsFlag int
+var (
+	//mediaType string
+	resultsFlag   int
+	requireAuthor bool
+	extension     string
+)
 
 // searchCmd represents the search command
 var searchCmd = &cobra.Command{
@@ -35,7 +41,7 @@ var searchCmd = &cobra.Command{
 	Short: "Search for content hosted by Library Genesis",
 	Long: `
 	Search pattern and get a list of hash map urls to it, and show
-	formatted title + link`,
+	formatted title + link.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var (
 			books         []libgen.Book
@@ -45,24 +51,22 @@ var searchCmd = &cobra.Command{
 		)
 
 		if len(args) < 1 {
-			cmd.Help()
+			if err := cmd.Help(); err != nil {
+				log.Fatal(err)
+			}
+			os.Exit(0)
 		}
 
 		searchQuery := strings.Join(args, " ")
-		log.Printf("++ Searching for: %s\n", searchQuery)
+		fmt.Printf("++ Searching for: %s\n", searchQuery)
 
-		hashes, err := libgen.Search(searchQuery, resultsFlag)
+		books, err := libgen.Search(searchQuery, resultsFlag, true, requireAuthor, extension)
 		if err != nil {
 			log.Fatalf("error completing search query: %v", err)
 		}
 
-		books, err = libgen.GetDetails(hashes)
-		if err != nil {
-			log.Fatalf("error retrieving results from LibGen API: %v", err)
-		}
-
 		for _, b := range books {
-			selectChoice := fmt.Sprintf("%8s ", color.New(color.FgHiBlue).Sprintf(b.Id))
+			selectChoice := fmt.Sprintf("%8s ", color.New(color.FgHiBlue).Sprintf(b.ID))
 			selectChoice += fmt.Sprintf("%-4s ", color.New(color.FgRed).Sprintf(b.Extension))
 			if len(b.Title) > libgen.TitleMaxLength {
 				pBookFormat = b.Title[:libgen.TitleMaxLength]
@@ -98,14 +102,24 @@ var searchCmd = &cobra.Command{
 			}
 		}
 
+		fmt.Printf("Download started for: %s by %s\n", selectedBook.Title, selectedBook.Author)
+
 		if err := libgen.DownloadBook(selectedBook); err != nil {
-			log.Fatalf("error downloading book: %v", err)
+			log.Fatalf("error downloading %v: %v", selectedBook.Title, err)
 		}
+
+		fmt.Printf("%s %s", color.GreenString("[OK]"), selectedBook.Title+selectedBook.Extension)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(searchCmd)
-	searchCmd.Flags().IntVarP(&resultsFlag, "results", "r", 10, "Controls how many "+
+	//searchCmd.Flags().StringVarP(&mediaType, "media", "m", "libgen", "controls what "+
+	//	"type of media will be queried for. Ex: fiction, comics, scientific papers, etc.")
+	searchCmd.Flags().IntVarP(&resultsFlag, "results", "r", 10, "controls how many "+
 		"query results are displayed.")
+	searchCmd.Flags().BoolVarP(&requireAuthor, "require-author", "a", false, "controls "+
+		"if the query results will return any media without a listed author.")
+	searchCmd.Flags().StringVarP(&extension, "ext", "e", "", "controls if the query "+
+		"results will return any media with a certain file extension.")
 }

@@ -15,7 +15,7 @@
 package libgen_cli
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 
 	"github.com/fatih/color"
@@ -27,15 +27,15 @@ import (
 // statusCmd represents the status command
 var statusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Checks status of Library Genesis' mirrors.",
+	Short: "Checks the status of Library Genesis' mirrors.",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, url := range libgen.DownloadMirrors {
 			status := libgen.CheckMirror(url)
 			if status == http.StatusOK {
-				log.Printf("%s %s\n", color.GreenString("[OK]"), url.String())
+				fmt.Printf("%s %s\n", color.GreenString("[OK]"), url.String())
 			} else {
-				log.Printf("%s %s\n", color.RedString("[FAIL]"), url.String())
+				fmt.Printf("%s %s\n", color.RedString("[FAIL]"), url.String())
 			}
 		}
 	},

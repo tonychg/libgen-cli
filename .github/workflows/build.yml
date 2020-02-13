@@ -1,0 +1,72 @@
+name: build
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - 'master'
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [1.13.x]
+        platform: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - name: Install Go
+      id: install-go
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Checkout Code
+      id: checkout-code
+      uses: actions/checkout@v1
+
+    - name: Install Dependencies
+      id: install-deps
+      run: go mod download
+
+    - name: Test
+      id: test
+      run: go test ./...
+
+    - name: Build macOS
+      id: build-macos
+      if: matrix.os == 'macOS-latest'
+      run: go build -o libgen-cli-darwin main.go
+
+    - name: Build Linux
+      id: build-linux
+      if: matrix.os != 'ubuntu-latest'
+      run: go build -o libgen-cli-linux main.go
+
+    - name: Build Windows
+      id: build-windows
+      if: matrix.os == 'windows-latest'
+      run: go build -o libgen-cli-windows.exe main.go
+
+    - name: Create Release
+      id: create-release
+      if: success() && github.ref == 'refs/heads/master'
+      uses: actions/create-release@v1.0.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${GITHUB_REF/refs\/tags\//}
+        release_name: ${GITHUB_REF/refs\/tags\//}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Assets
+      id: upload-release-assets
+      if: success() && github.ref == 'refs/heads/master'
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: ./libgen-cli-$GOOS
+        asset_name: libgen-cli-$GOOS
+        asset_content_type: application/octet-stream
