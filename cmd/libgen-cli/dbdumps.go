@@ -32,9 +32,9 @@ import (
 var dbdumpsOutput string
 
 var dbdumpsCmd = &cobra.Command{
-	Use:   "dbdumps",
-	Short: "",
-	Long:  ``,
+	Use:     "dbdumps",
+	Short:   "",
+	Long:    ``,
 	Example: "libgen dbdumps",
 	Run: func(cmd *cobra.Command, args []string) {
 		r, err := http.Get("http://gen.lib.rus.ec/dbdumps/")
@@ -146,6 +146,6 @@ func removeQuotes(s string) string {
 
 func init() {
 	rootCmd.AddCommand(dbdumpsCmd)
-	dbdumpsCmd.Flags().StringVarP(&dbdumpsOutput, "output", "o", "", "where you want " +
+	dbdumpsCmd.Flags().StringVarP(&dbdumpsOutput, "output", "o", "", "where you want "+
 		"libgen-cli to save your download.")
 }
