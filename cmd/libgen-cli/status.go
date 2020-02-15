@@ -24,18 +24,49 @@ import (
 	"github.com/ciehanski/libgen-cli/libgen"
 )
 
+var mirrorSwitch string
+
 // statusCmd represents the status command
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Checks the status of Library Genesis' mirrors.",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		for _, url := range libgen.DownloadMirrors {
-			status := libgen.CheckMirror(url)
-			if status == http.StatusOK {
-				fmt.Printf("%s %s\n", color.GreenString("[OK]"), url.String())
-			} else {
-				fmt.Printf("%s %s\n", color.RedString("[FAIL]"), url.String())
+		switch mirrorSwitch {
+		case "download":
+			for _, url := range libgen.DownloadMirrors {
+				status := libgen.CheckMirror(url)
+				if status == http.StatusOK {
+					fmt.Printf("%s %s\n", color.GreenString("[OK]"), url.String())
+				} else {
+					fmt.Printf("%s %s\n", color.RedString("[FAIL]"), url.String())
+				}
+			}
+		case "search":
+			for _, url := range libgen.SearchMirrors {
+				status := libgen.CheckMirror(url)
+				if status == http.StatusOK {
+					fmt.Printf("%s %s\n", color.GreenString("[OK]"), url.String())
+				} else {
+					fmt.Printf("%s %s\n", color.RedString("[FAIL]"), url.String())
+				}
+			}
+		default:
+			for _, url := range libgen.SearchMirrors {
+				status := libgen.CheckMirror(url)
+				if status == http.StatusOK {
+					fmt.Printf("%s %s\n", color.GreenString("[OK]"), url.String())
+				} else {
+					fmt.Printf("%s %s\n", color.RedString("[FAIL]"), url.String())
+				}
+			}
+			for _, url := range libgen.DownloadMirrors {
+				status := libgen.CheckMirror(url)
+				if status == http.StatusOK {
+					fmt.Printf("%s %s\n", color.GreenString("[OK]"), url.String())
+				} else {
+					fmt.Printf("%s %s\n", color.RedString("[FAIL]"), url.String())
+				}
 			}
 		}
 	},
@@ -43,4 +74,5 @@ var statusCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(statusCmd)
+	statusCmd.Flags().StringVarP(&mirrorSwitch, "mirror", "m", "", "")
 }

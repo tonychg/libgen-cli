@@ -42,6 +42,12 @@ Filter by file extension:
 libgen search kubernetes -e pdf
 ```
 
+Specify an output path:
+
+```bash
+libgen search kubernetes -o ~/Desktop/libgen
+```
+
 Require that the author field is listed and available for the specific search
 results:
  
@@ -58,10 +64,23 @@ know the MD5 hash. See below for an example:
 libgen download 2F2DBA2A621B693BB95601C16ED680F8
 ```
 
+Specify an output path:
+
+```bash
+libgen download -o ~/Desktop/ 2F2DBA2A621B693BB95601C16ED680F8
+```
+
 The _download-all_ command will allow you to download all query results. See
 below for an example:
+
 ```bash
 libgen download-all kubernetes
+```
+
+Specify an output path:
+
+```bash
+libgen download-all -o ~/Desktop/ kubernetes
 ```
 
 #### Dbdumps:
@@ -73,6 +92,12 @@ libgen's database and allow you to download them with ease.
 libgen dbdumps
 ```
 
+Specify an output path:
+
+```bash
+libgen dbdumps -o ~/Desktop
+```
+
 #### Status:
 
 The _status_ command simply pings the mirrors for Library Genesis and
@@ -81,6 +106,18 @@ or not. See below for an example:
 
 ```bash
 libgen status
+```
+
+Specify to only check the status of the download mirrors:
+
+```bash
+libgen status -m download
+```
+
+Specify to only check the status of the search mirrors:
+
+```bash
+libgen status -m search
 ```
 
 ## License

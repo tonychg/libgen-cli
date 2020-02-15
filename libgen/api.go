@@ -38,7 +38,7 @@ import (
 func Search(query string, results int, print bool, requireAuthor bool, extension string) ([]Book, error) {
 	searchMirror := getWorkingMirror(SearchMirrors)
 	if searchMirror.Host == "" {
-		return nil, errors.New("unable to reach any Library Genesis resources. Please try again later.")
+		return nil, errors.New("unable to reach any Library Genesis resources")
 	}
 
 	// libgen search only allows query results of 25, 50 or 100.
@@ -108,7 +108,7 @@ func GetDetails(hashes []string, print bool, requireAuthor bool, extension strin
 	for _, hash := range hashes {
 		searchMirror := getWorkingMirror(SearchMirrors)
 		if searchMirror.Host == "" {
-			err := "unable to reach any Library Genesis resources. Please try again later."
+			err := "unable to reach any Library Genesis resources"
 			log.Printf(err)
 			return nil, errors.New(err)
 		}
@@ -221,6 +221,8 @@ func parseHashes(response string, results int) []string {
 	return hashes
 }
 
+// parseResponse takes in a slice of bytes and formats it
+// returns a Book object from the slice of bytes.
 func parseResponse(data []byte) (Book, error) {
 	var book Book
 	var formattedResp []map[string]string
@@ -253,6 +255,8 @@ func parseResponse(data []byte) (Book, error) {
 	return book, nil
 }
 
+// formatTitle shortens the title of a Book down to
+// the maximum allowed by TitleMaxLength.
 func formatTitle(title string) string {
 	var fTitle []string
 	var counter int
