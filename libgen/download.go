@@ -59,6 +59,9 @@ func DownloadBook(book Book, output string) error {
 			if err != nil {
 				return err
 			}
+			if err := os.Mkdir(fmt.Sprintf("%s/libgen", wd), 0700); err != nil {
+				return err
+			}
 			out, err = os.Create(fmt.Sprintf("%s/libgen/%s", wd, filename))
 			if err != nil {
 				return err

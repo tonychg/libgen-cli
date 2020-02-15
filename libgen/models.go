@@ -60,15 +60,18 @@ var SearchMirrors = []url.URL{
 		Scheme: "http",
 		Host:   "185.39.10.101",
 	},
+	{
+		Scheme: "https",
+		Host:   "93.174.95.27",
+	},
+	{
+		Scheme: "http",
+		Host:   "libgen.unblockall.org",
+	},
 }
 
 var DownloadMirrors = []url.URL{
 	SearchMirrors[1],
-	SearchMirrors[3],
-	{
-		Scheme: "https",
-		Host:   "93.174.95.29",
-	},
 	{
 		Scheme: "http",
 		Host:   "booksdl.org",
