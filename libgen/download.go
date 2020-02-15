@@ -54,16 +54,21 @@ func DownloadBook(book Book, output string) error {
 		filesize = r.ContentLength
 		bar := pb.Full.Start64(filesize)
 
+		var oserr error
 		if output == "" {
 			wd, err := os.Getwd()
 			if err != nil {
 				return err
 			}
-			if err := os.Mkdir(fmt.Sprintf("%s/libgen", wd), 0700); err != nil {
-				return err
+			if stat, err := os.Stat(fmt.Sprintf("%s/libgen", wd)); err == nil && stat.IsDir() {
+				out, oserr = os.Create(fmt.Sprintf("%s/libgen/%s", wd, filename))
+			} else {
+				if err := os.Mkdir(fmt.Sprintf("%s/libgen", wd), 0700); err != nil {
+					return err
+				}
+				out, oserr = os.Create(fmt.Sprintf("%s/libgen/%s", wd, filename))
 			}
-			out, err = os.Create(fmt.Sprintf("%s/libgen/%s", wd, filename))
-			if err != nil {
+			if oserr != nil {
 				return err
 			}
 		} else {
