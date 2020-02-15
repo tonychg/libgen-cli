@@ -28,9 +28,9 @@ import (
 var downloadOutput string
 
 var downloadCmd = &cobra.Command{
-	Use:   "download",
-	Short: "Download a specific resource by hash.",
-	Long:  ``,
+	Use:     "download",
+	Short:   "Download a specific resource by hash.",
+	Long:    ``,
 	Example: "libgen download 2F2DBA2A621B693BB95601C16ED680F8",
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -58,6 +58,6 @@ var downloadCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(downloadCmd)
-	downloadCmd.Flags().StringVarP(&downloadOutput, "output", "o", "", "where you want " +
+	downloadCmd.Flags().StringVarP(&downloadOutput, "output", "o", "", "where you want "+
 		"libgen-cli to save your download.")
 }

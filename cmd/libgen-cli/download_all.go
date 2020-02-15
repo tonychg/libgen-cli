@@ -29,9 +29,9 @@ import (
 var downloadAllOutput string
 
 var downloadAllCmd = &cobra.Command{
-	Use:   "download-all",
-	Short: "",
-	Long:  ``,
+	Use:     "download-all",
+	Short:   "",
+	Long:    ``,
 	Example: "libgen download-all kubernetes",
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -66,6 +66,6 @@ var downloadAllCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(downloadAllCmd)
-	downloadAllCmd.Flags().StringVarP(&downloadAllOutput, "output", "o", "", "where you want " +
+	downloadAllCmd.Flags().StringVarP(&downloadAllOutput, "output", "o", "", "where you want "+
 		"libgen-cli to save your download.")
 }
