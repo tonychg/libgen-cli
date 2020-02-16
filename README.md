@@ -1,5 +1,4 @@
-## libgen-cli [![Build Status](https://github.com/ciehanski/libgen-cli/workflows/build/badge.svg)](https://github.com/ciehanski/libgen-cli/actions) [![Go Report Card](https://goreportcard.com/badge/github.com/ciehanski/libgen-cli)](https://goreportcard.com/report/github.com/ciehanski/libgen-cli)
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fciehanski%2Flibgen-cli.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fciehanski%2Flibgen-cli?ref=badge_shield)
+## libgen-cli [![Build Status](https://github.com/ciehanski/libgen-cli/workflows/build/badge.svg)](https://github.com/ciehanski/libgen-cli/actions) [![Go Report Card](https://goreportcard.com/badge/github.com/ciehanski/libgen-cli)](https://goreportcard.com/report/github.com/ciehanski/libgen-cli) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fciehanski%2Flibgen-cli.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fciehanski%2Flibgen-cli?ref=badge_shield)
 
 libgen-cli is a command line interface application which allows users to
 quickly query the Library Genesis dataset and download any of its contents.
