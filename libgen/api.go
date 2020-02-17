@@ -27,6 +27,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -195,13 +196,19 @@ func CheckMirror(url url.URL) int {
 
 func getWorkingMirror(urls []url.URL) url.URL {
 	var searchMirror url.URL
-	randMirror := SearchMirrors[rand.Intn(len(SearchMirrors))]
-	for _, mirrorURL := range urls {
+	rand.Seed(time.Now().UnixNano())
+
+	for {
+		randMirror := urls[rand.Intn(len(urls))]
+
 		if CheckMirror(randMirror) == http.StatusOK {
-			searchMirror = mirrorURL
+			searchMirror = randMirror
 			break
+		} else {
+			continue
 		}
 	}
+
 	return searchMirror
 }
 

@@ -30,7 +30,7 @@ func TestDownloadBook(t *testing.T) {
 	}
 }
 
-/*func TestGetDownloadURL(t *testing.T) {
+func TestGetDownloadURL(t *testing.T) {
 	book, err := GetDetails([]string{"2F2DBA2A621B693BB95601C16ED680F8"}, false, false, "")
 	if err != nil {
 		t.Error(err)
@@ -43,7 +43,7 @@ func TestDownloadBook(t *testing.T) {
 	if book[0].URL == "" {
 		t.Error("Unable to retrieve download URL")
 	}
-}*/
+}
 
 func TestGetBokDownloadURL(t *testing.T) {
 	book, err := GetDetails([]string{"2F2DBA2A621B693BB95601C16ED680F8"}, false, false, "")

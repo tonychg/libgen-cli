@@ -27,6 +27,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/cheggaaa/pb/v3"
 )
@@ -106,14 +107,15 @@ func DownloadBook(book Book, output string) error {
 // getDownloadURL picks a random download mirror to download the specified
 // resource from.
 func getDownloadURL(book *Book) error {
-	chosenMirror := DownloadMirrors[rand.Intn(len(DownloadMirrors)-1)]
+	rand.Seed(time.Now().UnixNano())
+	chosenMirror := DownloadMirrors[rand.Intn(2)]
 
 	switch chosenMirror.String() {
 	case "http://booksdl.org":
 		if err := getBooksdlDownloadURL(book); err != nil {
 			return err
 		}
-	case "http://b-ok.cc":
+	case "https://b-ok.cc":
 		if err := getBokDownloadURL(book); err != nil {
 			return err
 		}

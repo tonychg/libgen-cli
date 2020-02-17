@@ -48,28 +48,12 @@ var SearchMirrors = []url.URL{
 		Host:   "gen.lib.rus.ec",
 	},
 	{
-		Scheme: "http",
-		Host:   "libgen.lc",
-	},
-	{
-		Scheme: "http",
-		Host:   "libgen.li",
-	},
-	{
 		Scheme: "https",
 		Host:   "libgen.is",
 	},
 	{
 		Scheme: "http",
-		Host:   "185.39.10.101",
-	},
-	{
-		Scheme: "https",
-		Host:   "93.174.95.27",
-	},
-	{
-		Scheme: "http",
-		Host:   "libgen.unblockall.org",
+		Host:   "libgen.unblockit.red",
 	},
 }
 

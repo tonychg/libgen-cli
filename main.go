@@ -16,18 +16,12 @@
 package main
 
 import (
-	"log"
-	"math/rand"
-	"os"
-	"time"
-
 	"github.com/ciehanski/libgen-cli/cmd/libgen-cli"
+	"log"
+	"os"
 )
 
 func main() {
-	// Init random seed
-	rand.Seed(time.Now().UnixNano())
-
 	// Start libgen-cli
 	if err := libgen_cli.Execute(); err != nil {
 		log.Printf("%v", err)
