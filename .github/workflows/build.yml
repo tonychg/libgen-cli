@@ -30,7 +30,7 @@ jobs:
 
     - name: Test
       id: test
-      run: go test -v -race -covermode atomic -coverprofile=profile.cov ./...
+      run: go test -v -race -covermode atomic -coverprofile=./profile.cov ./...
 
     - name: Build macOS
       id: build-macos
