@@ -16,13 +16,13 @@
 package main
 
 import (
+	"github.com/ciehanski/libgen-cli/cmd/libgen-cli"
 	"log"
 	"os"
-
-	"github.com/ciehanski/libgen-cli/cmd/libgen-cli"
 )
 
 func main() {
+	// Start libgen-cli
 	if err := libgen_cli.Execute(); err != nil {
 		log.Printf("%v", err)
 		os.Exit(1)

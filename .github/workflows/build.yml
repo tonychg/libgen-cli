@@ -30,22 +30,31 @@ jobs:
 
     - name: Test
       id: test
-      run: go test ./...
+      run: go test ./... -v -race -covermode atomic -coverprofile=profile.cov
 
     - name: Build macOS
       id: build-macos
-      if: matrix.os == 'macOS-latest'
+      if: runner.os == 'macOS'
       run: go build -o libgen-cli-darwin main.go
 
     - name: Build Linux
       id: build-linux
-      if: matrix.os != 'ubuntu-latest'
+      if: runner.os == 'Ubuntu'
       run: go build -o libgen-cli-linux main.go
 
     - name: Build Windows
       id: build-windows
-      if: matrix.os == 'windows-latest'
+      if: runner.os == 'Windows'
       run: go build -o libgen-cli-windows.exe main.go
+
+    - name: Submit Code Coverage
+      id: submit-code-cov
+      if: runner.os != 'Windows'
+      env:
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        GO111MODULE=off go get -u github.com/mattn/goveralls
+        $(go env GOPATH)/bin/goveralls -service=github -coverprofile=profile.cov
 
 #    - name: Create Release
 #      id: create-release
