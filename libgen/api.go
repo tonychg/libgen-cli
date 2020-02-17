@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -85,6 +86,7 @@ func Search(query string, results int, print bool, requireAuthor bool, extension
 		return nil, err
 	}
 
+	// Get hashes from raw webpage and store them in hashes
 	hashes := parseHashes(string(b), results)
 
 	books, err := GetDetails(hashes, print, requireAuthor, extension)
@@ -157,16 +159,17 @@ func GetDetails(hashes []string, print bool, requireAuthor bool, extension strin
 			fTitle = formatTitle(fTitle)
 			fmt.Printf("%s\n    ++ ", fTitle)
 
+			// Slice author name if it exceeds AuthorMaxLength
 			if len(book.Author) > AuthorMaxLength {
 				formatAuthor = book.Author[:AuthorMaxLength]
 			} else {
 				formatAuthor = book.Author
 			}
 
-			pFormat("author", formatAuthor, color.FgYellow, "-25")
-			pFormat("year", book.Year, color.FgCyan, "4")
-			pFormat("size", fsize, color.FgGreen, "6")
-			pFormat("type", book.Extension, color.FgRed, "4")
+			prettify("author", formatAuthor, color.FgYellow, "-25")
+			prettify("year", book.Year, color.FgCyan, "4")
+			prettify("size", fsize, color.FgGreen, "6")
+			prettify("type", book.Extension, color.FgRed, "4")
 			fmt.Println()
 		}
 
@@ -180,6 +183,7 @@ func GetDetails(hashes []string, print bool, requireAuthor bool, extension strin
 	return books, nil
 }
 
+// CheckMirror returns the HTTP status code of the URL provided.
 func CheckMirror(url url.URL) int {
 	r, err := http.Get(url.String())
 	if err != nil || r.StatusCode != http.StatusOK {
@@ -191,8 +195,9 @@ func CheckMirror(url url.URL) int {
 
 func getWorkingMirror(urls []url.URL) url.URL {
 	var searchMirror url.URL
+	randMirror := SearchMirrors[rand.Intn(len(SearchMirrors))]
 	for _, mirrorURL := range urls {
-		if CheckMirror(mirrorURL) == http.StatusOK {
+		if CheckMirror(randMirror) == http.StatusOK {
 			searchMirror = mirrorURL
 			break
 		}
@@ -279,7 +284,7 @@ func formatTitle(title string) string {
 	return strings.Join(fTitle, " ")
 }
 
-func pFormat(key string, value string, col color.Attribute, align string) {
+func prettify(key string, value string, col color.Attribute, align string) {
 	c := color.New(col).SprintFunc()
 	a := fmt.Sprintf("%%%ss ", align)
 	s := fmt.Sprintf("@%s "+a, c(key), value)

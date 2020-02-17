@@ -21,6 +21,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -102,21 +103,27 @@ func DownloadBook(book Book, output string) error {
 	return nil
 }
 
+// getDownloadURL picks a random download mirror to download the specified
+// resource from.
 func getDownloadURL(book *Book) error {
-	var err error
+	chosenMirror := DownloadMirrors[rand.Intn(len(DownloadMirrors)-1)]
 
-	// Try different download mirrors for the same hash
-	if err = getBooksdlDownloadURL(book); err == nil && book.URL != "" {
-		return nil
-	} else if err = getBokDownloadURL(book); err == nil && book.URL != "" {
-		return nil
+	switch chosenMirror.String() {
+	case "http://booksdl.org":
+		if err := getBooksdlDownloadURL(book); err != nil {
+			return err
+		}
+	case "http://b-ok.cc":
+		if err := getBokDownloadURL(book); err != nil {
+			return err
+		}
 	}
 
 	if book.URL == "" {
-		return fmt.Errorf("unable to retrieve download link for book")
+		return fmt.Errorf("unable to retrieve download link for desired resource")
 	}
 
-	return err
+	return nil
 }
 
 func getBooksdlDownloadURL(book *Book) error {
@@ -138,13 +145,13 @@ func getBooksdlDownloadURL(book *Book) error {
 
 	if r.StatusCode != http.StatusOK {
 		return fmt.Errorf("unable to connect to mirror: %v", r.StatusCode)
-	} else {
-		b, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			return err
-		}
-		book.URL = getHref(booksdlReg, string(b))
 	}
+
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	book.URL = getHref(booksdlReg, string(b))
 
 	if err := r.Body.Close(); err != nil {
 		return err
@@ -169,14 +176,14 @@ func getBokDownloadURL(book *Book) error {
 
 	if r.StatusCode != http.StatusOK {
 		return fmt.Errorf("unable to connect to mirror: %v", r.StatusCode)
-	} else {
-		b, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			return err
-		}
-		downloadURL := getHref(bokReg, string(b))[6:]
-		book.URL = "https://b-ok.cc/dl/" + downloadURL
 	}
+
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	downloadURL := getHref(bokReg, string(b))[6:]
+	book.URL = "https://b-ok.cc/dl/" + downloadURL
 
 	if err := r.Body.Close(); err != nil {
 		return err

@@ -30,7 +30,7 @@ jobs:
 
     - name: Test
       id: test
-      run: go test ./...
+      run: go test -v -race -covermode atomic -coverprofile=profile.cov ./...
 
     - name: Build macOS
       id: build-macos
@@ -46,6 +46,14 @@ jobs:
       id: build-windows
       if: matrix.os == 'windows-latest'
       run: go build -o libgen-cli-windows.exe main.go
+
+    - name: Submit Code Coverage
+      id: submit-code-cov
+      env:
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        GO111MODULE=off go get -u github.com/mattn/goveralls
+        $(go env GOPATH)/bin/goveralls -service=github -coverprofile=profile.cov
 
 #    - name: Create Release
 #      id: create-release
