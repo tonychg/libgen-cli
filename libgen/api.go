@@ -16,6 +16,7 @@
 package libgen
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -29,7 +30,6 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
-	json "github.com/json-iterator/go"
 )
 
 // Search sends a query the search.php page hosted by gen.lib.rus.ec and
