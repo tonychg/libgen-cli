@@ -18,6 +18,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
+	"runtime"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -25,39 +28,71 @@ import (
 	"github.com/ciehanski/libgen-cli/libgen"
 )
 
-var downloadOutput string
-
 var downloadCmd = &cobra.Command{
 	Use:     "download",
 	Short:   "Download a specific resource by hash.",
-	Long:    ``,
+	Long:    `Use this command if you already know the hash of the specific resource you'd like to download.'`,
 	Example: "libgen download 2F2DBA2A621B693BB95601C16ED680F8",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		if len(args) < 1 {
+		if len(args) != 1 {
 			if err := cmd.Help(); err != nil {
-				log.Fatal(err)
+				fmt.Printf("error displaying CLI help: %v\n", err)
 			}
-			os.Exit(0)
+			os.Exit(1)
+		}
+		// Ensure provided entry is valid MD5 hash
+		re := regexp.MustCompile(libgen.SearchMD5)
+		if !re.MatchString(args[0]) {
+			fmt.Printf("\nPlease provide a valid MD5 hash\n")
+			os.Exit(1)
 		}
 
-		book, err := libgen.GetDetails(args, libgen.GetWorkingMirror(libgen.SearchMirrors), true, false, "")
+		// Get flags
+		output, err := cmd.Flags().GetString("output")
+		if err != nil {
+			fmt.Printf("error getting output flag: %v\n", err)
+		}
+
+		fmt.Printf("++ Searching for: %s\n", args[0])
+
+		bookDetails, err := libgen.GetDetails(&libgen.GetDetailsOptions{
+			Hashes:       args,
+			SearchMirror: libgen.GetWorkingMirror(libgen.SearchMirrors),
+			Print:        true,
+		})
 		if err != nil {
 			log.Fatalf("error retrieving results from LibGen API: %v", err)
 		}
+		book := bookDetails[0]
 
-		fmt.Printf("Download started for: %s by %s\n", book[0].Title, book[0].Author)
+		fmt.Println(strings.Repeat("-", 80))
+		fmt.Printf("Download started for: %s by %s\n", book.Title, book.Author)
 
-		if err := libgen.DownloadBook(book[0], downloadOutput); err != nil {
-			log.Fatalf("error downloading %v: %v", book[0].Title, err)
+		if err := libgen.GetDownloadURL(book); err != nil {
+			fmt.Printf("error getting download URL: %v\n", err)
+			os.Exit(1)
+		}
+		if err := libgen.DownloadBook(book, output); err != nil {
+			fmt.Printf("error downloading %v: %v\n", book.Title, err)
+			os.Exit(1)
 		}
 
-		fmt.Printf("%s %s", color.GreenString("[OK]"), book[0].Title+book[0].Extension)
+		if runtime.GOOS == "windows" {
+			_, err = fmt.Fprintf(color.Output, "\n%s %s by %s.%s", color.GreenString("[OK]"),
+				book.Title, book.Author, book.Extension)
+			if err != nil {
+				fmt.Printf("error writing to Windows os.Stdout: %v\n", err)
+				os.Exit(1)
+			}
+		} else {
+			fmt.Printf("\n%s %s by %s.%s\n", color.GreenString("[OK]"),
+				book.Title, book.Author, book.Extension)
+		}
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(downloadCmd)
-	downloadCmd.Flags().StringVarP(&downloadOutput, "output", "o", "", "where you want "+
+	downloadCmd.Flags().StringP("output", "o", "", "where you want "+
 		"libgen-cli to save your download.")
 }

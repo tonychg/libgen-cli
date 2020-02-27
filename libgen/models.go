@@ -15,29 +15,39 @@
 
 package libgen
 
-import "net/url"
+import (
+	"net/url"
+	"time"
+)
 
 const (
+	Version    = "v1.0.4"
 	SearchHref = "<a href='book/index.php.+</a>"
 	SearchMD5  = "[A-Z0-9]{32}"
 	booksdlReg = "http://booksdl.org/get\\.php\\?md5=\\w{32}\\&key=\\w{16}"
-	bokReg     = `/book/\d{6}/\d{6}`
+	bokReg     = `\/dl\/\d{6}\/\w{6}`
 	//libgenPwReg     = `http://libgen.pw/item/detail/id/\d*$`
-	JSONQuery       = "id,title,author,filesize,extension,md5,year"
-	TitleMaxLength  = 65
-	AuthorMaxLength = 25
+	JSONQuery         = "id,title,author,filesize,Extension,md5,year,language,pages,publisher,edition"
+	TitleMaxLength    = 68
+	AuthorMaxLength   = 25
+	httpClientTimeout = time.Second * 6
 )
 
 // Book is the struct of resources on Library Genesis.
 type Book struct {
-	ID        string
-	Title     string
-	Author    string
-	Filesize  string
-	Extension string
-	Md5       string
-	Year      string
-	URL       string
+	ID          string
+	Title       string
+	Author      string
+	Filesize    string
+	Extension   string
+	Md5         string
+	Year        string
+	Language    string
+	Pages       string
+	Publisher   string
+	Edition     string
+	DownloadURL string
+	PageURL     string
 }
 
 // SearchMirrors contains all valid and tested mirrors used for
@@ -52,8 +62,12 @@ var SearchMirrors = []url.URL{
 		Host:   "libgen.is",
 	},
 	{
-		Scheme: "http",
+		Scheme: "https",
 		Host:   "libgen.unblockit.red",
+	},
+	{
+		Scheme: "http",
+		Host:   "libgen.unblockall.org",
 	},
 }
 
@@ -68,4 +82,27 @@ var DownloadMirrors = []url.URL{
 		Scheme: "https",
 		Host:   "b-ok.cc",
 	},
+}
+
+// SearchOptions are the optional parameters available for the Search
+// function.
+type SearchOptions struct {
+	Query         string
+	SearchMirror  url.URL
+	Results       int
+	Print         bool
+	RequireAuthor bool
+	Extension     string
+	Year          int
+}
+
+// GetDetailsOptions are the optional parameters available for the GetDetails
+// function.
+type GetDetailsOptions struct {
+	Hashes        []string
+	SearchMirror  url.URL
+	Print         bool
+	RequireAuthor bool
+	Extension     string
+	Year          int
 }

@@ -3,3 +3,6 @@
 libgen-cli
 /libgen/test
 /libgen/libgen
+/libgen/libgen.test
+/libgen/mem.prof
+libgen-cli.exe

@@ -17,7 +17,6 @@ package libgen
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -25,9 +24,9 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -37,38 +36,34 @@ import (
 // similar mirror) and then provides the web page's contents provided from the
 // resulting http request to the parseHashes() function to extract the specific
 // hashes of matches found from the search query provided.
-func Search(query string, results int, print bool, requireAuthor bool, extension string) ([]Book, error) {
-	searchMirror := GetWorkingMirror(SearchMirrors)
-	if searchMirror.Host == "" {
-		return nil, errors.New("unable to reach any Library Genesis resources")
-	}
-
-	// libgen search only allows query results of 25, 50 or 100.
+func Search(options *SearchOptions) ([]*Book, error) {
+	// libgen search only allows query Results of 25, 50 or 100.
 	// We handle that here
 	var res int
 	switch {
-	case results <= 25:
+	case options.Results <= 25:
 		res = 25
-	case results <= 50:
+	case options.Results <= 50:
 		res = 50
 	default:
 		res = 100
 	}
 
-	// Define URL with required query parameters
-	searchMirror.Path = "search.php"
-	q := searchMirror.Query()
-	q.Set("req", query)
+	// Define DownloadURL with required query parameters
+	options.SearchMirror.Path = "search.php"
+	q := options.SearchMirror.Query()
+	q.Set("req", options.Query)
 	q.Set("lg_topic", "libgen")
 	q.Set("open", "0")
 	q.Set("view", "simple")
 	q.Set("res", string(res))
 	q.Set("phrase", "1")
 	q.Set("column", "def")
-	searchMirror.RawQuery = q.Encode()
+	options.SearchMirror.RawQuery = q.Encode()
 
 	// Execute GET request on search query
-	r, err := http.Get(searchMirror.String())
+	client := http.Client{Timeout: httpClientTimeout}
+	r, err := client.Get(options.SearchMirror.String())
 	if err != nil {
 		return nil, err
 	}
@@ -88,9 +83,16 @@ func Search(query string, results int, print bool, requireAuthor bool, extension
 	}
 
 	// Get hashes from raw webpage and store them in hashes
-	hashes := parseHashes(string(b), results)
+	hashes := parseHashes(string(b), options.Results)
 
-	books, err := GetDetails(hashes, searchMirror, print, requireAuthor, extension)
+	books, err := GetDetails(&GetDetailsOptions{
+		Hashes:        hashes,
+		SearchMirror:  options.SearchMirror,
+		Print:         options.Print,
+		RequireAuthor: options.RequireAuthor,
+		Extension:     options.Extension,
+		Year:          options.Year,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -101,21 +103,19 @@ func Search(query string, results int, print bool, requireAuthor bool, extension
 // GetDetails retrieves more details about a specific piece of media
 // based off of its unique hash/id. That information is then requested
 // in JSON format and sanitized in an array of Books.
-func GetDetails(hashes []string, searchMirror url.URL, print bool, requireAuthor bool, extension string) ([]Book, error) {
-	var (
-		books        []Book
-		formatAuthor string
-		fsize        string
-	)
+func GetDetails(options *GetDetailsOptions) ([]*Book, error) {
+	var books []*Book
 
-	for _, hash := range hashes {
-		searchMirror.Path = "json.php"
-		q := searchMirror.Query()
+	// For each hash found on the page, parse it into a Book struct
+	for _, hash := range options.Hashes {
+		options.SearchMirror.Path = "json.php"
+		q := options.SearchMirror.Query()
 		q.Set("ids", hash)
 		q.Set("fields", JSONQuery)
-		searchMirror.RawQuery = q.Encode()
+		options.SearchMirror.RawQuery = q.Encode()
 
-		r, err := http.Get(searchMirror.String())
+		client := http.Client{Timeout: httpClientTimeout}
+		r, err := client.Get(options.SearchMirror.String())
 		if err != nil {
 			log.Printf("error reaching API: %v", err)
 			return nil, err
@@ -133,14 +133,23 @@ func GetDetails(hashes []string, searchMirror url.URL, print bool, requireAuthor
 		}
 
 		// Flag filters
-		if requireAuthor && book.Author == "" {
+		if options.RequireAuthor && book.Author == "" {
 			continue
 		}
-		if extension != "" && extension != book.Extension {
+		if options.Extension != "" && options.Extension != book.Extension {
 			continue
 		}
-
-		if print {
+		if options.Year != 0 {
+			y, err := strconv.Atoi(book.Year)
+			if err != nil {
+				return nil, err
+			}
+			if options.Year != y {
+				continue
+			}
+		}
+		if options.Print {
+			var fsize string
 			size, err := strconv.Atoi(book.Filesize)
 			if err != nil {
 				fsize = "N/A"
@@ -148,25 +157,51 @@ func GetDetails(hashes []string, searchMirror url.URL, print bool, requireAuthor
 				fsize = humanize.Bytes(uint64(size))
 			}
 
+			// Print separation lines
 			fmt.Println(strings.Repeat("-", 80))
+
+			// Print ID + Title
 			fTitle := fmt.Sprintf("%5s %s", color.New(color.FgHiBlue).Sprintf(book.ID), book.Title)
-			fTitle = formatTitle(fTitle)
-			fmt.Printf("%s\n    ++ ", fTitle)
+			fTitle = formatTitle(fTitle, TitleMaxLength)
+			if runtime.GOOS == "windows" {
+				_, err = fmt.Fprintf(color.Output, "%s\n    ++ ", fTitle)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				fmt.Printf("%s\n    ++ ", fTitle)
+			}
 
 			// Slice author name if it exceeds AuthorMaxLength
+			var formatAuthor string
 			if len(book.Author) > AuthorMaxLength {
 				formatAuthor = book.Author[:AuthorMaxLength]
+			} else if book.Author == "" {
+				formatAuthor = "N/A"
 			} else {
 				formatAuthor = book.Author
 			}
 
-			prettify("author", formatAuthor, color.FgYellow, "-25")
-			prettify("year", book.Year, color.FgCyan, "4")
-			prettify("size", fsize, color.FgGreen, "6")
-			prettify("type", book.Extension, color.FgRed, "4")
+			err = prettify("author", formatAuthor, color.FgYellow, "-25")
+			if err != nil {
+				return nil, err
+			}
+			err = prettify("year", book.Year, color.FgCyan, "4")
+			if err != nil {
+				return nil, err
+			}
+			err = prettify("size", fsize, color.FgGreen, "6")
+			if err != nil {
+				return nil, err
+			}
+			err = prettify("type", book.Extension, color.FgRed, "4")
+			if err != nil {
+				return nil, err
+			}
 			fmt.Println()
 		}
 
+		// Add valid book to the []Book for the search
 		books = append(books, book)
 
 		if err := r.Body.Close(); err != nil {
@@ -177,19 +212,21 @@ func GetDetails(hashes []string, searchMirror url.URL, print bool, requireAuthor
 	return books, nil
 }
 
-// CheckMirror returns the HTTP status code of the URL provided.
+// CheckMirror returns the HTTP status code of the DownloadURL provided.
 func CheckMirror(url url.URL) int {
-	r, err := http.Get(url.String())
+	client := http.Client{Timeout: httpClientTimeout}
+	r, err := client.Get(url.String())
 	if err != nil || r.StatusCode != http.StatusOK {
 		return http.StatusBadGateway
 	}
-
 	return http.StatusOK
 }
 
+// GetWorkingMirror selects a random mirror from the []url.DownloadURL
+// provided and checks the mirror for a proper HTTP status code
+// for working order.
 func GetWorkingMirror(urls []url.URL) url.URL {
 	var mirror url.URL
-	rand.Seed(time.Now().UnixNano())
 
 	for {
 		randMirror := urls[rand.Intn(len(urls))]
@@ -205,6 +242,19 @@ func GetWorkingMirror(urls []url.URL) url.URL {
 	return mirror
 }
 
+func ParseDbdumps(response string) []string {
+	re := regexp.MustCompile(`(["])(.*?\.(rar|sql.gz))"`)
+	dbdumps := re.FindAllString(response, -1)
+
+	for _, dbdump := range dbdumps {
+		dbdump = RemoveQuotes(dbdump)
+	}
+
+	return dbdumps
+}
+
+// parseHashes takes in a HTTP response and scans it for
+// an MD5 hash and then returns the found hashes.
 func parseHashes(response string, results int) []string {
 	var hashes []string
 	re := regexp.MustCompile(SearchHref)
@@ -228,7 +278,7 @@ func parseHashes(response string, results int) []string {
 
 // parseResponse takes in a slice of bytes and formats it
 // returns a Book object from the slice of bytes.
-func parseResponse(data []byte) (Book, error) {
+func parseResponse(data []byte) (*Book, error) {
 	var book Book
 	var formattedResp []map[string]string
 
@@ -250,23 +300,31 @@ func parseResponse(data []byte) (Book, error) {
 					book.Md5 = v
 				case "year":
 					book.Year = v
+				case "language":
+					book.Language = v
+				case "pages":
+					book.Pages = v
+				case "publisher":
+					book.Publisher = v
+				case "edition":
+					book.Edition = v
 				}
 			}
 		}
 	} else {
-		return Book{}, err
+		return &Book{}, err
 	}
 
-	return book, nil
+	return &book, nil
 }
 
 // formatTitle shortens the title of a Book down to
 // the maximum allowed by TitleMaxLength.
-func formatTitle(title string) string {
+func formatTitle(title string, maxLen int) string {
 	var fTitle []string
 	var counter int
 
-	if len(title) < TitleMaxLength {
+	if len(title) <= maxLen {
 		return title
 	}
 
@@ -274,9 +332,9 @@ func formatTitle(title string) string {
 	for _, t := range strings.Split(title, " ") {
 		counter += len(t)
 
-		if counter > TitleMaxLength {
+		if counter > maxLen {
 			counter = 0
-			t = t + "\n"
+			t = t + "...\n"
 		}
 		fTitle = append(fTitle, t)
 	}
@@ -284,9 +342,28 @@ func formatTitle(title string) string {
 	return strings.Join(fTitle, " ")
 }
 
-func prettify(key string, value string, col color.Attribute, align string) {
+// prettify is a helper function that adds color and
+// formats text returned to the user.
+func prettify(key string, value string, col color.Attribute, align string) error {
 	c := color.New(col).SprintFunc()
 	a := fmt.Sprintf("%%%ss ", align)
 	s := fmt.Sprintf("@%s "+a, c(key), value)
-	fmt.Printf(a, s)
+	if runtime.GOOS == "windows" {
+		_, err := fmt.Fprintf(color.Output, a, s)
+		if err != nil {
+			return err
+		}
+	} else {
+		fmt.Printf(a, s)
+	}
+	return nil
+}
+
+func RemoveQuotes(s string) string {
+	if s == "" {
+		return ""
+	}
+	s = s[1:]
+	s = s[:len(s)-1]
+	return s
 }

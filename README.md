@@ -30,7 +30,8 @@ provide you results available for download. See below for a few examples:
 libgen search kubernetes
 ```
 
-Filter the amount of results displayed:
+Filter the amount of results displayed:  
+(Must be between 1-100).
 
 ```bash
 libgen search kubernetes -r 5
@@ -55,6 +56,12 @@ results:
 libgen search kubernetes -a
 ```
 
+Filter results by year:
+
+```bash
+libgen search kubernetes -y 2019
+```
+
 #### Download:
 
 The _download_ command will allow you to download a specific book if already 
@@ -75,6 +82,13 @@ below for an example:
 
 ```bash
 libgen download-all kubernetes
+```
+
+Specify the desired amount of results downloaded:  
+(Must be between 1-100).
+
+```bash
+libgen download-all kubernetes -r 50
 ```
 
 Specify an output path:
@@ -118,6 +132,14 @@ Specify to only check the status of the search mirrors:
 
 ```bash
 libgen status -m search
+```
+
+#### Version:
+
+Check the version of the installed libgen-cli client:
+
+```bash
+libgen -v
 ```
 
 ## License

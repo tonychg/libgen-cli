@@ -16,15 +16,29 @@
 package main
 
 import (
-	"github.com/ciehanski/libgen-cli/cmd/libgen-cli"
+	"fmt"
 	"log"
+	"math/rand"
+	"net"
 	"os"
+	"time"
+
+	"github.com/ciehanski/libgen-cli/cmd/libgen-cli"
 )
 
 func main() {
-	// Start libgen-cli
+	_, err := net.DialTimeout("tcp", "golang.org:80", time.Second*10)
+	if err != nil {
+		fmt.Println("\nYou need an internet connection to run libgen-cli.")
+		os.Exit(1)
+	}
+
 	if err := libgen_cli.Execute(); err != nil {
 		log.Printf("%v", err)
 		os.Exit(1)
 	}
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }
