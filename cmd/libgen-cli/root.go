@@ -25,12 +25,16 @@ import (
 	"github.com/ciehanski/libgen-cli/libgen"
 )
 
+var rootValidArgs = []string{"dbdumps", "download", "download-all", "link", "search", "status", "version"}
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "libgen",
 	Short: "A command line interface to access Library Genesis' library.",
 	Long: `libgen-cli queries Library Genesis, lists all results of a specific query, 
 	and makes them available for download. Simple and easy.`,
+	//BashCompletionFunction: bashCompletion,
+	ValidArgs: rootValidArgs,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -42,6 +46,8 @@ func Execute() error {
 	rootCmd.AddCommand(downloadAllCmd)
 	rootCmd.AddCommand(searchCmd)
 	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(linkCmd)
+	rootCmd.AddCommand(completionCmd)
 
 	if len(os.Args) < 2 {
 		if err := rootCmd.Help(); err != nil {

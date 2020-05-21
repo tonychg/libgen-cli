@@ -1,19 +1,31 @@
-## libgen-cli [![Build Status](https://github.com/ciehanski/libgen-cli/workflows/build/badge.svg)](https://github.com/ciehanski/libgen-cli/actions) [![Coverage Status](https://coveralls.io/repos/github/ciehanski/libgen-cli/badge.svg?branch=cleanup)](https://coveralls.io/github/ciehanski/libgen-cli?branch=cleanup) [![Go Report Card](https://goreportcard.com/badge/github.com/ciehanski/libgen-cli)](https://goreportcard.com/report/github.com/ciehanski/libgen-cli) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fciehanski%2Flibgen-cli.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fciehanski%2Flibgen-cli?ref=badge_shield)
+## libgen-cli [![Build Status](https://github.com/ciehanski/libgen-cli/workflows/build/badge.svg)](https://github.com/ciehanski/libgen-cli/actions) [![Coverage Status](https://coveralls.io/repos/github/ciehanski/libgen-cli/badge.svg?branch=master)](https://coveralls.io/github/ciehanski/libgen-cli?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/ciehanski/libgen-cli)](https://goreportcard.com/report/github.com/ciehanski/libgen-cli) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fciehanski%2Flibgen-cli.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fciehanski%2Flibgen-cli?ref=badge_shield)
 
 libgen-cli is a command line interface application which allows users to
 quickly query the Library Genesis dataset and download any of its contents.
 
-![Example](https://github.com/ciehanski/libgen-cli/blob/master/resources/libgen-cli-example.gif)
+## Table of Contents
+- [Installation](#installation)
+- [Commands](#commands)
+	- [Search](#search)
+	- [Download](#download)
+	- [Dbdumps](#dbdumps)
+	- [Status](#status)
+    - [Version](#version)
+    - [Link](#link)
+- [Disclaimer](#disclaimer)
+- [License](#license)
+
+![libgen-cli Example](https://github.com/ciehanski/libgen-cli/blob/master/resources/libgen-cli-example.gif)
 
 ## Installation
 
 You can download the latest binary from the releases section of this repo
 which can be found [here](https://github.com/ciehanski/libgen-cli/releases).
 
-If you have Golang installed on your local machine you can use the
+If you have [Golang](https://golang.org) installed on your local machine you can use the
 commands belows to install it directly into your $GOPATH.
 
-```
+```bash
 go get -u github.com/ciehanski/libgen-cli
 go install github.com/ciehanski/libgen-cli
 ```
@@ -112,6 +124,15 @@ Specify an output path:
 libgen dbdumps -o ~/Desktop
 ```
 
+#### Link
+
+The _link_ command will retrieve and output the direct download link
+of a specific MD5 resource.
+
+```bash
+libgen link 2F2DBA2A621B693BB95601C16ED680F8
+```
+
 #### Status:
 
 The _status_ command simply pings the mirrors for Library Genesis and
@@ -141,6 +162,14 @@ Check the version of the installed libgen-cli client:
 ```bash
 libgen -v
 ```
+
+## Disclaimer
+
+This repository is for research purposes only, the use of this code is your sole responsibility.
+
+I take NO responsibility and/or liability for how you choose to use any of the source code available 
+here. By using any of the files available in this repository, you understand that you are AGREEING 
+TO USE AT YOUR OWN RISK. Once again, ALL files available here are for EDUCATION and/or RESEARCH purposes ONLY.
 
 ## License
 - Apache License 2.0

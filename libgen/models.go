@@ -21,17 +21,20 @@ import (
 )
 
 const (
-	Version      = "v1.0.5"
-	SearchHref   = "<a href='book/index.php.+</a>"
-	SearchMD5    = "[A-Z0-9]{32}"
-	booksdlReg   = "http://booksdl.org/get\\.php\\?md5=\\w{32}\\&key=\\w{16}"
-	bokReg       = `\/dl\/\d{6}\/\w{6}`
-	nineThreeReg = `\/main\/\d{1}\/[A-Za-z0-9]{32}\/.+?(gz|pdf|rar|djvu|epub|chm)`
-	//libgenPwReg     = `http://libgen.pw/item/detail/id/\d*$`
+	Version           = "v1.0.6"
+	SearchHref        = "<a href='book/index.php.+</a>"
+	SearchMD5         = "[A-Z0-9]{32}"
+	booksdlReg        = "http://80.82.78.13/get\\.php\\?md5=\\w{32}\\&key=\\w{16}&mirr=1"
+	bokReg            = `\/dl\/\d{6}\/\w{6}`
+	bokDownloadLimit  = "WARNING: There are more than 5 downloads from your IP"
+	nineThreeReg      = `\/main\/\d{1}\/[A-Za-z0-9]{32}\/.+?(gz|pdf|rar|djvu|epub|chm)`
 	JSONQuery         = "id,title,author,filesize,extension,md5,year,language,pages,publisher,edition,coverurl"
 	TitleMaxLength    = 68
 	AuthorMaxLength   = 25
-	HttpClientTimeout = time.Second * 10
+	HTTPClientTimeout = time.Second * 10
+	//UploadUsername    = "genesis"
+	//UploadPassword    = "upload"
+	//libgenPwReg     = `http://libgen.pw/item/detail/id/\d*$`
 )
 
 // Book is the struct of resources on Library Genesis.
@@ -71,14 +74,20 @@ var SearchMirrors = []url.URL{
 		Scheme: "http",
 		Host:   "libgen.unblockall.org",
 	},
+	{
+		Scheme: "https",
+		Host:   "93.174.95.27",
+	},
 }
 
 // DownloadMirrors contains all valid and tested mirrors used for
 // downloading content from Library Genesis.
 var DownloadMirrors = []url.URL{
+	// booksdl.org no longer used by libgen.
+	// New mirror URL/IP: 80.82.78.13
 	{
 		Scheme: "http",
-		Host:   "booksdl.org",
+		Host:   "80.82.78.13",
 	},
 	{
 		Scheme: "https",
