@@ -1,18 +1,13 @@
 test:
-	go test -v -race ./...
+	go test -race ./...
 	rm -rf cmd/libgen-cli/libgen
 	rm -rf libgen/libgen
-
 build:
-	go build -v -o libgen
-
-build-travis:
-	go build -o artifacts/libgen-cli-linux .
-	GOOS=darwin GOARCH=amd64 go build -o artifacts/libgen-cli-macos .
-	GOOS=windows GOARCH=amd64 go build -o artifacts/libgen-cli-windows.exe . 
-	GOOS=freebsd GOARCH=amd64 go build -o artifacts/libgen-cli-freebsd .
-
+	GOARCH=amd64 GOOS=darwin go build -o libgen-cli-darwin
+	GOARCH=amd64 GOOS=linux go build -o libgen-cli-linux
+	GOARCH=amd64 GOOS=freebsd go build -o libgen-cli-freebsd
+	GOARCH=amd64 GOOS=windows go build -o libgen-cli-windows
 install:
 	go install .
 
-.PHONY: test build build-travis bin
+.PHONY: test build bin
