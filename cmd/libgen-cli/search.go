@@ -67,6 +67,10 @@ var searchCmd = &cobra.Command{
 		if err != nil {
 			fmt.Printf("error getting output flag: %v\n", err)
 		}
+		publisher, err := cmd.Flags().GetString("publisher")
+		if err != nil {
+			fmt.Printf("error getting publisher flag: %v\n", err)
+		}
 
 		// Join args for complete search query in case
 		// it contains spaces
@@ -82,6 +86,7 @@ var searchCmd = &cobra.Command{
 			RequireAuthor: requireAuthor,
 			Extension:     extension,
 			Year:          year,
+			Publisher:     publisher,
 		})
 		if err != nil {
 			fmt.Printf("error completing search query: %v\n", err)
@@ -136,19 +141,19 @@ var searchCmd = &cobra.Command{
 			Keys: &promptui.SelectKeys{
 				Next: promptui.Key{
 					Code:    readline.CharNext,
-					Display: "↓",
+					Display: "↓ (j)",
 				},
 				Prev: promptui.Key{
 					Code:    readline.CharPrev,
-					Display: "↑",
+					Display: "↑ (k)",
 				},
 				PageUp: promptui.Key{
 					Code:    readline.CharForward,
-					Display: "→",
+					Display: "→ (l)",
 				},
 				PageDown: promptui.Key{
 					Code:    readline.CharBackward,
-					Display: "←",
+					Display: "← (h)",
 				},
 			},
 		}
@@ -170,9 +175,9 @@ var searchCmd = &cobra.Command{
 		}
 
 		if selectedBook.Author == "" {
-			fmt.Printf("Download started for: %s by N/A\n", selectedBook.Title)
+			fmt.Printf("Download starting for: %s by N/A\n", selectedBook.Title)
 		} else {
-			fmt.Printf("Download started for: %s by %s\n", selectedBook.Title, selectedBook.Author)
+			fmt.Printf("Download starting for: %s by %s\n", selectedBook.Title, selectedBook.Author)
 		}
 
 		if err := libgen.GetDownloadURL(&selectedBook); err != nil {
@@ -208,4 +213,6 @@ func init() {
 		"libgen-cli to save your download.")
 	searchCmd.Flags().IntP("year", "y", 0, "filters search query results by the "+
 		"year provided.")
+	searchCmd.Flags().StringP("publisher", "p", "", "filters search query "+
+		"results by the publisher provided")
 }

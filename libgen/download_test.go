@@ -29,17 +29,16 @@ func TestDownloadBook(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := GetDownloadURL(book[0]); err != nil {
+	if err := getBooksdlDownloadURL(book[0]); err != nil {
 		t.Error(err)
 	}
 	if err := DownloadBook(book[0], ""); err != nil {
-		if err.Error() != "unable to reach mirror 80.82.78.13: HTTP 502" {
-			t.Error(err)
-		}
+		t.Error(err)
 	}
 }
 
 func TestGetDownloadURL(t *testing.T) {
+	t.Skip()
 	book, err := GetDetails(&GetDetailsOptions{
 		Hashes:       []string{"2F2DBA2A621B693BB95601C16ED680F8"},
 		SearchMirror: GetWorkingMirror(SearchMirrors),
@@ -52,7 +51,6 @@ func TestGetDownloadURL(t *testing.T) {
 	if err := GetDownloadURL(book[0]); err != nil {
 		t.Error(err)
 	}
-
 	if book[0].DownloadURL == "" {
 		t.Error("download URL empty")
 	}
