@@ -71,6 +71,10 @@ var searchCmd = &cobra.Command{
 		if err != nil {
 			fmt.Printf("error getting publisher flag: %v\n", err)
 		}
+		language, err := cmd.Flags().GetString("language")
+		if err != nil {
+			fmt.Printf("error getting language flag: %v\n", err)
+		}
 
 		// Join args for complete search query in case
 		// it contains spaces
@@ -88,6 +92,7 @@ var searchCmd = &cobra.Command{
 			Extension:     extension,
 			Year:          year,
 			Publisher:     publisher,
+			Language:      language,
 		})
 		if err != nil {
 			fmt.Printf("error completing search query: %v\n", err)
@@ -216,4 +221,6 @@ func init() {
 		"year provided.")
 	searchCmd.Flags().StringP("publisher", "p", "", "filters search query "+
 		"results by the publisher provided")
+	searchCmd.Flags().StringP("language", "l", "", "filters search query "+
+		"results by the language provided")
 }

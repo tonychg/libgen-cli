@@ -61,6 +61,14 @@ var downloadAllCmd = &cobra.Command{
 		if err != nil {
 			fmt.Printf("error getting output flag: %v\n", err)
 		}
+		publisher, err := cmd.Flags().GetString("publisher")
+		if err != nil {
+			fmt.Printf("error getting publisher flag: %v\n", err)
+		}
+		language, err := cmd.Flags().GetString("language")
+		if err != nil {
+			fmt.Printf("error getting language flag: %v\n", err)
+		}
 
 		// Join args for complete search query in case
 		// it contains spaces
@@ -74,6 +82,8 @@ var downloadAllCmd = &cobra.Command{
 			RequireAuthor: requireAuthor,
 			Extension:     extension,
 			Year:          year,
+			Publisher:     publisher,
+			Language:      language,
 		})
 		if err != nil {
 			fmt.Printf("error completing search query: %v\n", err)
@@ -122,4 +132,8 @@ func init() {
 		"save your download.")
 	downloadAllCmd.Flags().IntP("year", "y", 0, "filters search query results by the "+
 		"year provided.")
+	downloadAllCmd.Flags().StringP("publisher", "p", "", "filters search query "+
+		"results by the publisher provided")
+	downloadAllCmd.Flags().StringP("language", "l", "", "filters search query "+
+		"results by the language provided")
 }

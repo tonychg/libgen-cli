@@ -83,6 +83,12 @@ Filter by the publisher's name:
 $ libgen search kubernetes -p "Michael Joseph"
 ```
 
+Filter by the file's language:
+
+```bash
+$ libgen search kubernetes -l "english"
+```
+
 ### Download:
 
 The _download_ command will allow you to download a specific book if already 
@@ -98,8 +104,8 @@ Specify an output path:
 $ libgen download -o ~/Desktop/ 2F2DBA2A621B693BB95601C16ED680F8
 ```
 
-The _download-all_ command will allow you to download all query results. See
-below for an example:
+The _download-all_ command will allow you to download all query results. This
+command uses the same flags and arguments as the _search_. See below for an example:
 
 ```bash
 $ libgen download-all kubernetes
