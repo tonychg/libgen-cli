@@ -25,7 +25,7 @@ import (
 	"github.com/ciehanski/libgen-cli/libgen"
 )
 
-var rootValidArgs = []string{"dbdumps", "download", "download-all", "link", "search", "status", "version"}
+var rootValidArgs = []string{"dbdumps", "download-from-file", "download", "download-all", "link", "search", "status", "version"}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -33,7 +33,7 @@ var rootCmd = &cobra.Command{
 	Short: "A command line interface to access Library Genesis' library.",
 	Long: `libgen-cli queries Library Genesis, lists all results of a specific query, 
 	and makes them available for download. Simple and easy.`,
-	//BashCompletionFunction: bashCompletion,
+	// BashCompletionFunction: bashCompletion,
 	ValidArgs: rootValidArgs,
 }
 
@@ -42,6 +42,7 @@ var rootCmd = &cobra.Command{
 func Execute() error {
 	// Add all subcommands to root cmd
 	rootCmd.AddCommand(dbdumpsCmd)
+	rootCmd.AddCommand(downloadFromFileCmd)
 	rootCmd.AddCommand(downloadCmd)
 	rootCmd.AddCommand(downloadAllCmd)
 	rootCmd.AddCommand(searchCmd)
