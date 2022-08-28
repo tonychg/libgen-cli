@@ -134,7 +134,7 @@ var searchCmd = &cobra.Command{
 
 		promptTemplate := &promptui.SelectTemplates{
 			Active: `▸ {{ .ID | cyan | bold }}{{ if .Title }} ({{ .Title }}){{end}}`,
-			//Inactive: `  {{ .Title | cyan }}{{ if .Title }} ({{ .Title }}){{end}}`,
+			// Inactive: `  {{ .Title | cyan }}{{ if .Title }} ({{ .Title }}){{end}}`,
 			Selected: `{{ "✔" | green }} %s: {{ .ID | cyan }}{{ if .Title }} ({{ .Title }}){{end}}`,
 		}
 
@@ -190,7 +190,7 @@ var searchCmd = &cobra.Command{
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		if err := libgen.DownloadBook(&selectedBook, output); err != nil {
+		if err := libgen.DownloadFile(&selectedBook, output); err != nil {
 			fmt.Printf("error downloading %v: %v\n", selectedBook.Title, err)
 			os.Exit(1)
 		}

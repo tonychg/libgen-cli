@@ -15,6 +15,8 @@
 package libgen
 
 import (
+	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -32,7 +34,7 @@ func TestDownloadBook(t *testing.T) {
 	if err := getLibraryLolURL(book[0]); err != nil {
 		t.Error(err)
 	}
-	if err := DownloadBook(book[0], ""); err != nil {
+	if err := DownloadFile(book[0], ""); err != nil {
 		t.Error(err)
 	}
 }
@@ -562,4 +564,167 @@ $('.btn-tooltip-bottom').tooltip({
 	if !strings.Contains(string(results), "get.php?md5=1794743bb21d72736ffe64d66dca9f0e&key=") {
 		t.Errorf("incorrect DownloadURL returned. got %s", string(results))
 	}
+}
+
+func TestGetMagazineFields(t *testing.T) {
+	sourceCode := `
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title></title>
+<style type="text/css">
+table td {
+	vertical-align: top;
+}
+#message {
+	width: 400px;
+	margin: 0px auto;
+	padding: 10px 20px;
+	text-align: center;	
+	background-color: #0f9d58;
+	color: #fff;
+	border-radius: 3px;
+}
+#info {
+	max-width: 700px;
+	padding: 10px;
+	border: 1px solid #C0C0C0;
+	font-family: "Arial", "Helvetica", sans-serif;
+	font-size: 0.8em;
+}
+#info img {
+	display: block;
+	width: 240px;
+	max-width: 240px;
+	margin: 3px auto;
+}
+#download {
+	text-align: center;
+}
+#download ul {
+	margin: 0.8em 0 0 0;
+}
+#download ul li {
+	display: inline-block;
+}
+#download ul li a {
+	display: block !important;
+	width: 5.5em;
+	margin: 0 5px;
+	padding: 4px;
+	border: 1px solid blue;
+	border-radius: 7px;
+	text-decoration: none;
+	text-align: center;
+}
+.adsbygoogle {
+	margin: 7px;
+}
+</style>
+<script src="/jquery-latest.min.js"></script>
+</head>
+<body>
+<table width="100%" align="center" border="0">
+<tr>
+	<td class="ad"></td>
+	<td id="info">				<div id="download">
+		<h2><a href="http://62.182.86.140/scimag/14833364/EXPLORING%20THE%20LIMITS%20OF%20THE%20TECHNOLOGY%20S-CURVE.%20PART%20II_%20ARCHITECTURAL%20TECHNOLOGIES%20%28Production%20and%20Operations%20Management%2C%20vol.%201%2C%20issue%204%29%20%281992%29.pdf">GET</a></h2>
+		</div>
+				<h1>EXPLORING THE LIMITS OF THE TECHNOLOGY S-CURVE. PART II: ARCHITECTURAL TECHNOLOGIES</h1>
+		<p>Authors: CLAYTON M. CHRISTENSEN</p>		<p>DOI: <a href="http://anonym.to/?http://doi.org/10.1111%2Fj.1937-5956.1992.tb00002.x">10.1111/j.1937-5956.1992.tb00002.x</a></p>		<p>Journal: Production and Operations Management</p>		<p>Year: 1992</p>		<p>Volume: 1</p>		<p>Issue: 4</p>		<p>Publisher: Production and Operations Management Society</p>				</td>
+	<td class="ad"></td>
+</tr>
+</table>
+</body>
+</html>`
+	expected := ScienceMagazine{
+		DOI: "10.1111/j.1937-5956.1992.tb00002.x",
+		// SourceCode: sourceCode,
+		Title:       "EXPLORING THE LIMITS OF THE TECHNOLOGY S-CURVE. PART II ARCHITECTURAL TECHNOLOGIES",
+		Author:      "CLAYTON M. CHRISTENSEN",
+		Year:        "1992",
+		Volume:      "1",
+		Issue:       "4",
+		Publisher:   "Production and Operations Management Society",
+		Extension:   "pdf",
+		DownloadUrl: "http://62.182.86.140/scimag/14833364/EXPLORING%20THE%20LIMITS%20OF%20THE%20TECHNOLOGY%20S-CURVE.%20PART%20II_%20ARCHITECTURAL%20TECHNOLOGIES%20%28Production%20and%20Operations%20Management%2C%20vol.%201%2C%20issue%204%29%20%281992%29.pdf",
+	}
+	returned := getMagazine(sourceCode, "10.1111/j.1937-5956.1992.tb00002.x")
+	results := struct {
+		DOI      string          `json:"doi"`
+		Expected ScienceMagazine `json:"expected"`
+		Returned ScienceMagazine `json:"returned"`
+	}{
+		DOI:      "10.1111/j.1937-5956.1992.tb00002.x",
+		Expected: expected,
+		Returned: returned,
+	}
+	results.Returned.SourceCode = ""
+	results.Expected.SourceCode = ""
+
+	// compare json encodings of expected vs returned
+	if !reflect.DeepEqual(results.Expected, results.Returned) {
+		t.Errorf("expected %v, got %v", results.Expected, results.Returned)
+	}
+}
+
+func TestGetMagazineSource(t *testing.T) {
+	expected := ScienceMagazine{
+		DOI: "10.1111/j.1937-5956.1992.tb00002.x",
+		// SourceCode: sourceCode,
+		Title:       "EXPLORING THE LIMITS OF THE TECHNOLOGY S-CURVE. PART II ARCHITECTURAL TECHNOLOGIES",
+		Author:      "CLAYTON M. CHRISTENSEN",
+		Year:        "1992",
+		Volume:      "1",
+		Issue:       "4",
+		Publisher:   "Production and Operations Management Society",
+		Extension:   "pdf",
+		DownloadUrl: "http://62.182.86.140/scimag/14833364/EXPLORING%20THE%20LIMITS%20OF%20THE%20TECHNOLOGY%20S-CURVE.%20PART%20II_%20ARCHITECTURAL%20TECHNOLOGIES%20%28Production%20and%20Operations%20Management%2C%20vol.%201%2C%20issue%204%29%20%281992%29.pdf",
+	}
+	returned, err := GetScienceMagazineDownload("10.1111/j.1937-5956.1992.tb00002.x")
+	if err != nil {
+		t.Errorf("error: %v", err)
+	}
+	results := struct {
+		DOI      string          `json:"doi"`
+		Expected ScienceMagazine `json:"expected"`
+		Returned ScienceMagazine `json:"returned"`
+	}{
+		DOI:      "10.1111/j.1937-5956.1992.tb00002.x",
+		Expected: expected,
+		Returned: returned,
+	}
+	results.Returned.SourceCode = ""
+	results.Expected.SourceCode = ""
+
+	// compare json encodings of expected vs returned
+	if !reflect.DeepEqual(results.Expected, results.Returned) {
+		t.Errorf("expected %v, got %v", results.Expected, results.Returned)
+	}
+}
+
+func TestDownloadMagazine(t *testing.T) {
+	magazine := ScienceMagazine{
+		DOI: "10.1111/j.1937-5956.1992.tb00002.x",
+		// SourceCode: sourceCode,
+		Title:       "EXPLORING THE LIMITS OF THE TECHNOLOGY S-CURVE. PART II ARCHITECTURAL TECHNOLOGIES",
+		Author:      "CLAYTON M. CHRISTENSEN",
+		Year:        "1992",
+		Volume:      "1",
+		Issue:       "4",
+		Publisher:   "Production and Operations Management Society",
+		Extension:   "pdf",
+		DownloadUrl: "http://62.182.86.140/scimag/14833364/EXPLORING%20THE%20LIMITS%20OF%20THE%20TECHNOLOGY%20S-CURVE.%20PART%20II_%20ARCHITECTURAL%20TECHNOLOGIES%20%28Production%20and%20Operations%20Management%2C%20vol.%201%2C%20issue%204%29%20%281992%29.pdf",
+	}
+	err := DownloadFile(&magazine, "./")
+	if err != nil {
+		t.Errorf("error: %v", err)
+	}
+	filename := generateDownloadFilename(&magazine)
+	// check if file exists
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		t.Errorf("file %s does not exist", filename)
+	}
+
 }

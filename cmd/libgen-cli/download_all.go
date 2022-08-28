@@ -100,7 +100,7 @@ var downloadAllCmd = &cobra.Command{
 			wg.Add(1)
 			bChan <- book
 			go func() {
-				if err := libgen.DownloadBook(<-bChan, output); err != nil {
+				if err := libgen.DownloadFile(<-bChan, output); err != nil {
 					fmt.Printf("error downloading %v: %v\n", book.Title, err)
 				}
 				wg.Done()

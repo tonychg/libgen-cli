@@ -43,8 +43,9 @@ var downloadCmd = &cobra.Command{
 		}
 		// Ensure provided entry is valid MD5 hash
 		re := regexp.MustCompile(libgen.SearchMD5)
-		if !re.MatchString(args[0]) {
-			fmt.Printf("\nPlease provide a valid MD5 hash\n")
+		reDoi := regexp.MustCompile(libgen.SearchDOI)
+		if !re.MatchString(args[0]) && !reDoi.MatchString(args[0]) {
+			fmt.Printf("\nPlease provide a valid MD5 or DOI hash for %s. \n", args[0])
 			os.Exit(1)
 		}
 
@@ -54,7 +55,26 @@ var downloadCmd = &cobra.Command{
 			fmt.Printf("error getting output flag: %v\n", err)
 		}
 
+		magazine, err := cmd.Flags().GetBool("magazine")
+		if err != nil {
+			fmt.Printf("error getting magazine flag: %v\n", err)
+		}
+
 		fmt.Printf("++ Searching for: %s\n", args[0])
+
+		if magazine {
+			download, err := libgen.GetScienceMagazineDownload(args[0])
+			if err != nil {
+				fmt.Printf("error getting science magazine download: %v\n", err)
+				os.Exit(1)
+			}
+			if err := libgen.DownloadFile(&download, output); err != nil {
+				fmt.Printf("error downloading %v: %v\n", download.Title, err)
+				os.Exit(1)
+			}
+			fmt.Printf("++ Downloaded: %s\n", download.Title)
+			return
+		}
 
 		bookDetails, err := libgen.GetDetails(&libgen.GetDetailsOptions{
 			Hashes:       args,
@@ -73,7 +93,7 @@ var downloadCmd = &cobra.Command{
 			fmt.Printf("error getting download URL: %v\n", err)
 			os.Exit(1)
 		}
-		if err := libgen.DownloadBook(book, output); err != nil {
+		if err := libgen.DownloadFile(book, output); err != nil {
 			fmt.Printf("error downloading %v: %v\n", book.Title, err)
 			os.Exit(1)
 		}
@@ -95,4 +115,5 @@ var downloadCmd = &cobra.Command{
 func init() {
 	downloadCmd.Flags().StringP("output", "o", "", "where you want "+
 		"libgen-cli to save your download.")
+	downloadCmd.Flags().BoolP("magazine", "m", false, "is this a magazine?")
 }

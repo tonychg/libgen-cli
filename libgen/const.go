@@ -20,6 +20,7 @@ const (
 	Version           = "v1.0.9"
 	SearchHref        = "<a href='book/index.php.+</a>"
 	SearchMD5         = "[a-zA-Z0-9]{32}"
+	SearchDOI         = "[a-zA-Z0-9./()-]{8,30}"
 	booksdlReg        = `get\.php\?md5=\w{32}&key=\w{16}`
 	libraryLolReg     = `http:\/\/62\.182\.86\.140\/main\/\d{7}\/\w{32}\/.+?(gz|pdf|rar|djvu|epub|chm)`
 	dbdumpReg         = `(["])(.*?\.(rar|sql.gz))"`

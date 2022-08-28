@@ -50,6 +50,22 @@ type Book struct {
 	PageURL     string
 }
 
+func (b *Book) getAuthor() string {
+	return b.Author
+}
+
+func (b *Book) getTitle() string {
+	return b.Title
+}
+
+func (b *Book) getExtension() string {
+	return b.Extension
+}
+
+func (b *Book) getDownloadURL() string {
+	return b.DownloadURL
+}
+
 // SearchOptions are the optional parameters available for the Search
 // function.
 type SearchOptions struct {
