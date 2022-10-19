@@ -18,6 +18,7 @@ package libgen
 import (
 	"errors"
 	"fmt"
+	"github.com/ciehanski/libgen-cli/sysutil"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -38,13 +39,25 @@ func DownloadFile(book EReadable, outputPath string) error {
 	var filesize int64
 	filename := generateDownloadFilename(book)
 
-	// create another filename variable, this time stripping out : and / from the filename
-	strippedFilename := strings.Replace(filename, ":", "", -1)
+	// create another filename variable, this time using regex to remove certain characters
+	// gsed -E 's/ {1,}/ /g;s/:/ -/g;s.( {1,}$|^ {1,}|[\?\!,$\*\^\#\`\"])..g'
+	strippedFilename := regexp.MustCompile(`[?!,$*^#"]`).ReplaceAllString(filename, "")
+	// strippedFilename := strings.Replace(filename, ":", "", -1)
+
+	if outputPath != "" {
+		sysutil.MakeFolder(outputPath)
+	}
 
 	// check to see if the book is already downloaded
 	for _, strFilename := range []string{strippedFilename, filename} {
 		if _, err := os.Stat(outputPath + "/" + strFilename); err == nil {
 			fmt.Printf("%s already downloaded\n", filename)
+			if book.getDownloadType() == "science" {
+				// check if the book is a ScienceMagazine or Book type
+				if mag, ok := book.(*ScienceMagazine); ok {
+					sysutil.SaveDoiToFileList(mag.DOI)
+				}
+			}
 			return nil
 		}
 	}
@@ -268,20 +281,55 @@ func findMatch(reg string, response []byte) []byte {
 	return nil
 }
 
+// EReadable is an interface to return ebook information
 type EReadable interface {
 	getAuthor() string
 	getExtension() string
 	getTitle() string
 	getDownloadURL() string
+	getDownloadType() string
 }
 
+// generateDownloadFilename generates a filename for the downloaded file,
+//  stripping unwanted characters.
 func generateDownloadFilename(file EReadable) string {
 	var tmp []string
 	tmp = append(tmp, file.getTitle())
 	tmp = append(tmp, fmt.Sprintf(" by %s", file.getAuthor()))
 	tmp = append(tmp, fmt.Sprintf(".%s", file.getExtension()))
-	fmt.Println("Extension: ", file.getExtension())
-	return strings.Join(tmp, "")
+
+	// make sure title is less than 30 characters, otherwise truncate
+	// make sure author is less than 20 characters long, otherwise truncate
+	// make sure extension is less than 5 characters long, otherwise truncate
+	if len(tmp[0]) > 80 {
+		tmp[0] = tmp[0][:30]
+	}
+	if len(tmp[1]) > 30 {
+		tmp[1] = tmp[1][:20]
+	}
+
+	return cleanFilename(strings.Join(tmp, ""))
+}
+
+// cleanFilename is a helper function that strips unwanted characters from a
+// filename.
+func cleanFilename(filename string) string {
+	// remove unwanted characters
+	strip := regexp.MustCompile(`[?!,$*^#\\";]`).ReplaceAllString(filename, "")
+
+	// replace '\s*:\s*' with ' - '
+	strip = regexp.MustCompile(`\s*:\s*`).ReplaceAllString(strip, " - ")
+
+	// replace '(^\s+|\s+$' with ''
+	strip = regexp.MustCompile(`(^\s+|\s+$)`).ReplaceAllString(strip, "")
+
+	// replace '\s+' with ' '
+	strip = regexp.MustCompile(`\s+`).ReplaceAllString(strip, " ")
+
+	// replace '..' with '.'
+	strip = regexp.MustCompile(`\.\.`).ReplaceAllString(strip, ".")
+
+	return strip
 }
 
 type ScienceMagazine struct {
@@ -311,6 +359,10 @@ func (s *ScienceMagazine) getExtension() string {
 
 func (s *ScienceMagazine) getDownloadURL() string {
 	return s.DownloadUrl
+}
+
+func (s *ScienceMagazine) getDownloadType() string {
+	return "science"
 }
 
 // GetScienceMagazineDownload is a helper function that retrieves the Science

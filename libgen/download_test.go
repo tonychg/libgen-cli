@@ -726,5 +726,64 @@ func TestDownloadMagazine(t *testing.T) {
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		t.Errorf("file %s does not exist", filename)
 	}
+}
 
+func Test_stripFilename(t *testing.T) {
+	magazine := ScienceMagazine{
+		DOI:         "10.1111/j.1937-5956.1992.tb00002.x",
+		Author:      "Clayton M. Christensen",
+		Year:        "1992",
+		Volume:      "1",
+		Issue:       "4",
+		Publisher:   "Production and Operations Management Society",
+		Extension:   "pdf",
+		DownloadUrl: "http://62.182.86.140/scimag/14833364/EXPLORING%20THE%20LIMITS%20OF%20THE%20TECHNOLOGY%20S-CURVE.%20PART%20II_%20ARCHITECTURAL%20TECHNOLOGIES%20%28Production%20and%20Operations%20Management%2C%20vol.%201%2C%20issue%204%29%20%281992%29.pdf",
+	}
+
+	// december 2 and 10 days
+
+	table := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input:    "",
+			expected: "by Clayton M. Christensen.pdf",
+		},
+		{
+			input:    " ",
+			expected: "by Clayton M. Christensen.pdf",
+		},
+		{
+			input:    " Beginning Space",
+			expected: "Beginning Space by Clayton M. Christensen.pdf",
+		},
+		{
+			input:    "Ending Space ",
+			expected: "Ending Space by Clayton M. Christensen.pdf",
+		},
+		{
+			input:    " Beginning and End Space ",
+			expected: "Beginning and End Space by Clayton M. Christensen.pdf",
+		},
+		{
+			input:    "     Multiple            Spaces            In  a  Row    ",
+			expected: "Multiple Spaces In a Row by Clayton M. Christensen.pdf",
+		},
+		{
+			input:    `!Exploring!,$*^#"\ The Limits Of The Technology S-Curve. Part II Architectural Technologies!,$*^#"\`,
+			expected: `Exploring The Limits Of The Technology S-Curve. Part II Architectural Technologies by Clayton M. Christensen.pdf`,
+		},
+		{
+			input:    `Exploring The Limits Of The Technology S-Curve. Part II Architectural Technologies`,
+			expected: `Exploring The Limits Of The Technology S-Curve. Part II Architectural Technologies by Clayton M. Christensen.pdf`,
+		},
+	}
+
+	for _, test := range table {
+		magazine.Title = test.input
+		if result := generateDownloadFilename(&magazine); result != test.expected {
+			t.Errorf("expected %s, got %s.", test.expected, result)
+		}
+	}
 }

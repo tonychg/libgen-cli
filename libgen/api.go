@@ -48,6 +48,7 @@ type Book struct {
 	CoverURL    string
 	DownloadURL string
 	PageURL     string
+	Selected    bool
 }
 
 func (b *Book) getAuthor() string {
@@ -64,6 +65,10 @@ func (b *Book) getExtension() string {
 
 func (b *Book) getDownloadURL() string {
 	return b.DownloadURL
+}
+
+func (b *Book) getDownloadType() string {
+	return "book"
 }
 
 // SearchOptions are the optional parameters available for the Search
@@ -356,6 +361,12 @@ func parseResponse(response []byte) (*Book, error) {
 	return &book, nil
 }
 
+// printDetails prints the book details to the console.
+//
+//  @description: Prints the details of a book to the console.
+//  @param book Book object to print.
+//
+//  @return error
 func printDetails(book *Book) error {
 	var fsize string
 	size, err := strconv.Atoi(book.Filesize)
@@ -368,8 +379,8 @@ func printDetails(book *Book) error {
 	// Print separation lines
 	fmt.Println(strings.Repeat("-", 80))
 
-	// Print ID + Title
-	fTitle := fmt.Sprintf("%5s %s", color.New(color.FgHiBlue).Sprintf(book.ID), book.Title)
+	// Print Md5 + Title - JA
+	fTitle := fmt.Sprintf("%5s %s", color.New(color.FgHiBlue).Sprintf(book.Md5), book.Title)
 	fTitle = formatTitle(fTitle, TitleMaxLength)
 	if runtime.GOOS == "windows" {
 		_, err = fmt.Fprintf(color.Output, "%s\n    ++ ", fTitle)

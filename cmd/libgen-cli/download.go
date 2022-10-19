@@ -41,6 +41,7 @@ var downloadCmd = &cobra.Command{
 			}
 			os.Exit(1)
 		}
+
 		// Ensure provided entry is valid MD5 hash
 		re := regexp.MustCompile(libgen.SearchMD5)
 		reDoi := regexp.MustCompile(libgen.SearchDOI)
@@ -62,6 +63,11 @@ var downloadCmd = &cobra.Command{
 
 		fmt.Printf("++ Searching for: %s\n", args[0])
 
+		// check if output is a directory and if not, make it one
+		if output != "" {
+			makeFolder(output)
+		}
+
 		if magazine {
 			download, err := libgen.GetScienceMagazineDownload(args[0])
 			if err != nil {
@@ -81,6 +87,7 @@ var downloadCmd = &cobra.Command{
 			SearchMirror: libgen.GetWorkingMirror(libgen.SearchMirrors),
 			Print:        true,
 		})
+
 		if err != nil {
 			log.Fatalf("error retrieving results from LibGen API: %v", err)
 		}

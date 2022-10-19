@@ -2,6 +2,7 @@ package libgen_cli
 
 import (
 	"fmt"
+	"github.com/ciehanski/libgen-cli/libgen"
 	"reflect"
 	"testing"
 )
@@ -79,4 +80,8 @@ func Example_readInDOIs() {
 	fmt.Println(results)
 	// Output:
 	// [10.1016/s0140-6736(19)32039-2 10.1111/ijlh.13014]
+}
+
+func Test_selectFunction(t *testing.T) {
+	batchDownloadBooks([]*libgen.Book{}, DownloadConfig{})
 }
