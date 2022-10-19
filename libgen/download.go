@@ -16,9 +16,9 @@
 package libgen
 
 import (
-	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/ciehanski/libgen-cli/sysutil"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -31,22 +31,43 @@ import (
 	"github.com/cheggaaa/pb/v3"
 )
 
-// DownloadBook grabs the download DownloadURL for the book requested.
+// DownloadFile grabs the download DownloadURL for the book requested.
 // First, it queries Booksdl.org and then b-ok.cc for valid DownloadURL.
 // Then, the download process is initiated with a progress bar displayed to
 // the user's CLI.
-func DownloadBook(book *Book, outputPath string) error {
+func DownloadFile(book EReadable, outputPath string) error {
 	var filesize int64
-	filename := getBookFilename(book)
+	filename := generateDownloadFilename(book)
 
-	req, err := http.NewRequest("GET", book.DownloadURL, nil)
+	// create another filename variable, this time using regex to remove certain characters
+	// gsed -E 's/ {1,}/ /g;s/:/ -/g;s.( {1,}$|^ {1,}|[\?\!,$\*\^\#\`\"])..g'
+	strippedFilename := regexp.MustCompile(`[?!,$*^#"]`).ReplaceAllString(filename, "")
+	// strippedFilename := strings.Replace(filename, ":", "", -1)
+
+	if outputPath != "" {
+		sysutil.MakeFolder(outputPath)
+	}
+
+	// check to see if the book is already downloaded
+	for _, strFilename := range []string{strippedFilename, filename} {
+		if _, err := os.Stat(outputPath + "/" + strFilename); err == nil {
+			fmt.Printf("%s already downloaded\n", filename)
+			if book.getDownloadType() == "science" {
+				// check if the book is a ScienceMagazine or Book type
+				if mag, ok := book.(*ScienceMagazine); ok {
+					sysutil.SaveDoiToFileList(mag.DOI)
+				}
+			}
+			return nil
+		}
+	}
+
+	fmt.Println("Downloading", strippedFilename)
+	req, err := http.NewRequest("GET", book.getDownloadURL(), nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Add("Accept-Encoding", "*")
-	if strings.Contains(book.PageURL, "b-ok.cc") {
-		req.Header.Add("Referer", book.PageURL)
-	}
 	client := http.Client{Transport: &http.Transport{Proxy: http.ProxyFromEnvironment}}
 	r, err := client.Do(req)
 	if err != nil {
@@ -124,34 +145,23 @@ func DownloadDbdump(filename string, outputPath string) error {
 // resource from.
 // This is a hack that I don't like and needs to be revisited.
 func GetDownloadURL(book *Book) error {
-	chosenMirror := DownloadMirrors[rand.Intn(3)]
+	chosenMirror := DownloadMirrors[rand.Intn(len(DownloadMirrors))]
 
 	var x int
 	tries := 3
 	for tries >= x {
-		switch chosenMirror.String() {
-		case "80.82.78.13":
+		switch chosenMirror.Hostname() {
+		case "62.182.86.140":
+			if err := getLibraryLolURL(book); err != nil {
+				if err := getBooksdlDownloadURL(book); err != nil {
+					return err
+
+				}
+			}
+		case "libgen.rocks":
 			if err := getBooksdlDownloadURL(book); err != nil {
-				if err = getBokDownloadURL(book); err != nil {
-					if err := getNineThreeURL(book); err != nil {
-						return err
-					}
-				}
-			}
-		case "https://b-ok.cc":
-			if err := getBokDownloadURL(book); err != nil {
-				if err = getNineThreeURL(book); err != nil {
-					if err = getBooksdlDownloadURL(book); err != nil {
-						return err
-					}
-				}
-			}
-		case "http://93.174.95.29":
-			if err := getNineThreeURL(book); err != nil {
-				if err = getBooksdlDownloadURL(book); err != nil {
-					if err = getBokDownloadURL(book); err != nil {
-						return err
-					}
+				if err = getLibraryLolURL(book); err != nil {
+					return err
 				}
 			}
 		}
@@ -168,10 +178,34 @@ func GetDownloadURL(book *Book) error {
 	return nil
 }
 
-func getBooksdlDownloadURL(book *Book) error {
+func getLibraryLolURL(book *Book) error {
 	baseURL := &url.URL{
 		Scheme: "http",
-		Host:   "libgen.lc",
+		Host:   "library.lol",
+		Path:   "main/",
+	}
+	queryURL := baseURL.String() + book.Md5
+	book.PageURL = queryURL
+
+	b, err := getBody(queryURL)
+	if err != nil {
+		return err
+	}
+
+	downloadURL := findMatch(libraryLolReg, b)
+	if downloadURL == nil {
+		return errors.New("no valid download LibraryLol download URL found")
+	}
+
+	book.DownloadURL = string(downloadURL)
+
+	return nil
+}
+
+func getBooksdlDownloadURL(book *Book) error {
+	baseURL := &url.URL{
+		Scheme: "https",
+		Host:   "cdn1.booksdl.org",
 		Path:   "ads.php",
 	}
 	q := baseURL.Query()
@@ -184,98 +218,11 @@ func getBooksdlDownloadURL(book *Book) error {
 		return err
 	}
 
-	book.DownloadURL = string(findMatch(booksdlReg, b))
-
-	return nil
-}
-
-func getBokDownloadURL(book *Book) error {
-	baseURL := url.URL{
-		Scheme: "https",
-		Host:   "b-ok.cc",
-		Path:   "md5/",
-	}
-	queryURL := baseURL.String() + book.Md5
-	book.PageURL = queryURL
-
-	b, err := getBody(queryURL)
-	if err != nil {
-		return err
-	}
-
-	downloadURL := findMatch(bokReg, b)
+	downloadURL := findMatch(booksdlReg, b)
 	if downloadURL == nil {
-		return errors.New("no valid download DownloadURL found")
+		return errors.New("no valid download Booksdl download URL found")
 	}
-
-	book.DownloadURL = "https://b-ok.cc" + string(downloadURL)
-
-	if err := checkBokDownloadLimit(book); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// checkBokDownloadLimit checks the response from the b-ok.cc
-// download page and scans it for text stating there have
-// been more than 5 downloads from your IP in the past 24
-// hours and returns an error if so.
-func checkBokDownloadLimit(book *Book) error {
-	req, err := http.NewRequest("GET", book.DownloadURL, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Add("Referer", book.PageURL)
-	client := http.Client{
-		Timeout: HTTPClientTimeout,
-		Transport: &http.Transport{
-			Proxy:           http.ProxyFromEnvironment,
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	re := regexp.MustCompile(bokDownloadLimit)
-	matches := re.FindAllString(string(b), -1)
-
-	if len(matches) > 0 {
-		return errors.New("download limit reached for b-ok.cc")
-	}
-
-	if err := resp.Body.Close(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func getNineThreeURL(book *Book) error {
-	baseURL := url.URL{
-		Scheme: "http",
-		Host:   "93.174.95.29",
-		Path:   "_ads/",
-	}
-	queryURL := baseURL.String() + book.Md5
-	book.PageURL = queryURL
-
-	b, err := getBody(queryURL)
-	if err != nil {
-		return err
-	}
-
-	downloadURL := findMatch(nineThreeReg, b)
-	if downloadURL == nil {
-		return errors.New("no valid download DownloadURL found")
-	}
-
-	book.DownloadURL = "http://93.174.95.29" + string(downloadURL)
+	book.DownloadURL = fmt.Sprintf("https://libgen.rocks/%s", string(downloadURL))
 
 	return nil
 }
@@ -334,10 +281,302 @@ func findMatch(reg string, response []byte) []byte {
 	return nil
 }
 
-func getBookFilename(book *Book) string {
+// EReadable is an interface to return ebook information
+type EReadable interface {
+	getAuthor() string
+	getExtension() string
+	getTitle() string
+	getDownloadURL() string
+	getDownloadType() string
+}
+
+// generateDownloadFilename generates a filename for the downloaded file,
+//  stripping unwanted characters.
+func generateDownloadFilename(file EReadable) string {
 	var tmp []string
-	tmp = append(tmp, book.Title)
-	tmp = append(tmp, fmt.Sprintf(" by %s", book.Author))
-	tmp = append(tmp, fmt.Sprintf(".%s", book.Extension))
-	return strings.Join(tmp, "")
+	tmp = append(tmp, file.getTitle())
+	tmp = append(tmp, fmt.Sprintf(" by %s", file.getAuthor()))
+	tmp = append(tmp, fmt.Sprintf(".%s", file.getExtension()))
+
+	// make sure title is less than 30 characters, otherwise truncate
+	// make sure author is less than 20 characters long, otherwise truncate
+	// make sure extension is less than 5 characters long, otherwise truncate
+	if len(tmp[0]) > 80 {
+		tmp[0] = tmp[0][:30]
+	}
+	if len(tmp[1]) > 30 {
+		tmp[1] = tmp[1][:20]
+	}
+
+	return cleanFilename(strings.Join(tmp, ""))
+}
+
+// cleanFilename is a helper function that strips unwanted characters from a
+// filename.
+func cleanFilename(filename string) string {
+	// remove unwanted characters
+	strip := regexp.MustCompile(`[?!,$*^#\\";]`).ReplaceAllString(filename, "")
+
+	// replace '\s*:\s*' with ' - '
+	strip = regexp.MustCompile(`\s*:\s*`).ReplaceAllString(strip, " - ")
+
+	// replace '(^\s+|\s+$' with ''
+	strip = regexp.MustCompile(`(^\s+|\s+$)`).ReplaceAllString(strip, "")
+
+	// replace '\s+' with ' '
+	strip = regexp.MustCompile(`\s+`).ReplaceAllString(strip, " ")
+
+	// replace '..' with '.'
+	strip = regexp.MustCompile(`\.\.`).ReplaceAllString(strip, ".")
+
+	return strip
+}
+
+type ScienceMagazine struct {
+	SourceCode  string `json:"source_code"`
+	DOI         string `json:"doi"`
+	Author      string `json:"author"`
+	Title       string `json:"title"`
+	Year        string `json:"year"`
+	Volume      string `json:"volume"`
+	Issue       string `json:"issue"`
+	Publisher   string `json:"publisher"`
+	DownloadUrl string `json:"download_url"`
+	Extension   string `json:"extension"`
+}
+
+func (s *ScienceMagazine) getAuthor() string {
+	return s.Author
+}
+
+func (s *ScienceMagazine) getTitle() string {
+	return s.Title
+}
+
+func (s *ScienceMagazine) getExtension() string {
+	return s.Extension
+}
+
+func (s *ScienceMagazine) getDownloadURL() string {
+	return s.DownloadUrl
+}
+
+func (s *ScienceMagazine) getDownloadType() string {
+	return "science"
+}
+
+// GetScienceMagazineDownload is a helper function that retrieves the Science
+// Magazine download URL for a scientific article from libgen.is.
+func GetScienceMagazineDownload(doi string) (ScienceMagazine, error) {
+	magUrl := fmt.Sprintf("http://library.lol/scimag/%s", doi)
+	code, err := getSourceCode(magUrl)
+	if err != nil {
+
+	}
+	magazine := getMagazine(code, doi)
+	return magazine, nil
+}
+
+func getMagazine(code string, doi string) ScienceMagazine {
+	downloadURL, err := getMagazineDownloadURL(code)
+	if err != nil {
+
+	}
+
+	title, err := getMagazineTitle(code)
+	if err != nil {
+
+	}
+
+	author, err := getMagazineAuthor(code)
+	if err != nil {
+
+	}
+
+	year, err := getMagazineYear(code)
+	if err != nil {
+
+	}
+
+	volume, err := getMagazineVolume(code)
+	if err != nil {
+
+	}
+
+	issue, err := getMagazineIssue(code)
+	if err != nil {
+
+	}
+
+	publisher, err := getMagazinePublisher(code)
+	if err != nil {
+	}
+
+	filetype, err := getMagazineExtension(downloadURL)
+	if err != nil {
+
+	}
+
+	return ScienceMagazine{
+		SourceCode:  code,
+		DOI:         doi,
+		Author:      author,
+		Title:       title,
+		Year:        year,
+		Volume:      volume,
+		Issue:       issue,
+		Publisher:   publisher,
+		DownloadUrl: downloadURL,
+		Extension:   filetype,
+	}
+}
+
+// getSourceCode is a helper function that retrieves the source code for a
+// specified URL.
+func getSourceCode(site string) (string, error) {
+	// send a GET request to the site
+	// Generated by curl-to-Go: https://mholt.github.io/curl-to-go
+	// curl -X GET http://localhost:3000/auth/dropbox/callback \
+	// -u 6xz5d68qbv6s9p2:bzvaika2p87gar6
+	req, err := http.NewRequest("GET", site, nil)
+	if err != nil {
+		return "", errors.New("unable to create request")
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request for Source Code: ", err)
+		return "", errors.New("unable to send request")
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body: ", err)
+		return "", errors.New("unable to read response body")
+	}
+	return string(body), nil
+}
+
+// getMagazineDownloadURL is a helper function that retrieves the download URL for a
+// scientific article from libgen.is, between the link anchor, "GET".
+func getMagazineDownloadURL(sourceCode string) (string, error) {
+	// get the URL to the link that says "Download"
+	// Generated by curl-to-Go: https://mholt.github.io/curl-to-go
+	// curl -X GET http://localhost:3000/auth/dropbox/callback \
+	// -u 6xz5d68qbv6s9p2:bzvaika2p87gar6
+	re := regexp.MustCompile(`<a href="(.*?)">GET</a>`)
+	matches := re.FindStringSubmatch(sourceCode)
+	if len(matches) == 0 {
+		return "", errors.New("no download link found")
+	}
+	return matches[1], nil
+}
+
+func getMagazineTitle(sourceCode string) (string, error) {
+	// get the title of the article
+	// Generated by curl-to-Go: https://mholt.github.io/curl-to-go
+	// curl -X GET http://localhost:3000/auth/dropbox/callback \
+	// -u 6xz5d68qbv6s9p2:bzvaika2p87gar6
+	re := regexp.MustCompile(`<h1>(.*?)</h1>`)
+	matches := re.FindStringSubmatch(sourceCode)
+	if len(matches) == 0 {
+		return "", errors.New("no title found")
+	}
+
+	// strip : from the title
+	title := matches[1]
+	title = strings.Replace(title, ":", "", -1)
+	return title, nil
+}
+
+func getMagazineAuthor(sourceCode string) (string, error) {
+	// get the author of the article
+	// Generated by curl-to-Go: https://mholt.github.io/curl-to-go
+	// curl -X GET http://localhost:3000/auth/dropbox/callback \
+	// -u 6xz5d68qbv6s9p2:bzvaika2p87gar6
+	re := regexp.MustCompile(`<p>Authors: (.*?)</p>`)
+	matches := re.FindStringSubmatch(sourceCode)
+	if len(matches) == 0 {
+		return "", errors.New("no author found")
+	}
+	return matches[1], nil
+}
+
+func getMagazineYear(sourceCode string) (string, error) {
+	// get the year of the article
+	// Generated by curl-to-Go: https://mholt.github.io/curl-to-go
+	// curl -X GET http://localhost:3000/auth/dropbox/callback \
+	// -u 6xz5d68qbv6s9p2:bzvaika2p87gar6
+	re := regexp.MustCompile(`<p>Year: (.*?)</p>`)
+	matches := re.FindStringSubmatch(sourceCode)
+	if len(matches) == 0 {
+		return "", errors.New("no year found")
+	}
+	return matches[1], nil
+}
+
+func getMagazineVolume(sourceCode string) (string, error) {
+	// get the volume of the article
+	// Generated by curl-to-Go: https://mholt.github.io/curl-to-go
+	// curl -X GET http://localhost:3000/auth/dropbox/callback \
+	// -u 6xz5d68qbv6s9p2:bzvaika2p87gar6
+	re := regexp.MustCompile(`<p>Volume: (.*?)</p>`)
+	matches := re.FindStringSubmatch(sourceCode)
+	if len(matches) == 0 {
+		return "", errors.New("no volume found")
+	}
+	return matches[1], nil
+}
+
+func getMagazineIssue(sourceCode string) (string, error) {
+	// get the issue of the article
+	// Generated by curl-to-Go: https://mholt.github.io/curl-to-go
+	// curl -X GET http://localhost:3000/auth/dropbox/callback \
+	// -u 6xz5d68qbv6s9p2:bzvaika2p87gar6
+	re := regexp.MustCompile(`<p>Issue: (.*?)</p>`)
+	matches := re.FindStringSubmatch(sourceCode)
+	if len(matches) == 0 {
+		return "", errors.New("no issue found")
+	}
+	return matches[1], nil
+}
+
+func getMagazinePages(sourceCode string) (string, error) {
+	// get the pages of the article
+	// Generated by curl-to-Go: https://mholt.github.io/curl-to-go
+	// curl -X GET http://localhost:3000/auth/dropbox/callback \
+	// -u 6xz5d68qbv6s9p2:bzvaika2p87gar6
+	re := regexp.MustCompile(`<p>Pages: (.*?)</p>`)
+	matches := re.FindStringSubmatch(sourceCode)
+	if len(matches) == 0 {
+		return "", errors.New("no pages found")
+	}
+	return matches[1], nil
+}
+
+func getMagazinePublisher(sourceCode string) (string, error) {
+	// get the publisher of the article
+	// Generated by curl-to-Go: https://mholt.github.io/curl-to-go
+	// curl -X GET http://localhost:3000/auth/dropbox/callback \
+	// -u 6xz5d68qbv6s9p2:bzvaika2p87gar6
+	re := regexp.MustCompile(`<p>Publisher: (.*?)</p>`)
+	matches := re.FindStringSubmatch(sourceCode)
+	if len(matches) == 0 {
+		return "", errors.New("no publisher found")
+	}
+	return matches[1], nil
+}
+
+func getMagazineExtension(downloadUrl string) (string, error) {
+	// get the filetype of the article
+	// Generated by curl-to-Go: https://mholt.github.io/curl-to-go
+	// curl -X GET http://localhost:3000/auth/dropbox/callback \
+	// -u 6xz5d68qbv6s9p2:bzvaika2p87gar6
+	re := regexp.MustCompile(`\.([^.]*?)$`)
+	matches := re.FindStringSubmatch(downloadUrl)
+	if len(matches) == 0 {
+		return "", errors.New("no filetype found")
+	}
+	return matches[1], nil
 }

@@ -1,4 +1,4 @@
-## libgen-cli [![Build Status](https://github.com/ciehanski/libgen-cli/workflows/build/badge.svg)](https://github.com/ciehanski/libgen-cli/actions) [![Coverage Status](https://coveralls.io/repos/github/ciehanski/libgen-cli/badge.svg?branch=master)](https://coveralls.io/github/ciehanski/libgen-cli?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/ciehanski/libgen-cli)](https://goreportcard.com/report/github.com/ciehanski/libgen-cli) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fciehanski%2Flibgen-cli.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fciehanski%2Flibgen-cli?ref=badge_shield)
+## libgen-cli [![Build Status](https://github.com/ciehanski/libgen-cli/workflows/build/badge.svg)](https://github.com/ciehanski/libgen-cli/actions) [![Coverage Status](https://coveralls.io/repos/github/ciehanski/libgen-cli/badge.svg?branch=master)](https://coveralls.io/github/ciehanski/libgen-cli?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/ciehanski/libgen-cli)](https://goreportcard.com/report/github.com/ciehanski/libgen-cli)
 
 libgen-cli is a command line interface application which allows users to
 quickly query the Library Genesis dataset and download any of its contents.
@@ -26,8 +26,7 @@ If you have [Golang](https://golang.org) installed on your local machine you can
 commands belows to install it directly into your $GOPATH.
 
 ```bash
-$ go get -u github.com/ciehanski/libgen-cli
-$ go install github.com/ciehanski/libgen-cli
+$ go install github.com/ciehanski/libgen-cli@latest
 ```
 
 ## Commands
@@ -49,10 +48,14 @@ Filter the amount of results displayed:
 $ libgen search kubernetes -r 5
 ```
 
-Filter by file extension:
+Filter by file extension(s):
 
 ```bash
 $ libgen search kubernetes -e pdf
+```
+
+```bash
+$ libgen search kubernetes -e "pdf,epub"
 ```
 
 Specify an output path:
@@ -80,6 +83,12 @@ Filter by the publisher's name:
 $ libgen search kubernetes -p "Michael Joseph"
 ```
 
+Filter by the file's language:
+
+```bash
+$ libgen search kubernetes -l "english"
+```
+
 ### Download:
 
 The _download_ command will allow you to download a specific book if already 
@@ -95,8 +104,8 @@ Specify an output path:
 $ libgen download -o ~/Desktop/ 2F2DBA2A621B693BB95601C16ED680F8
 ```
 
-The _download-all_ command will allow you to download all query results. See
-below for an example:
+The _download-all_ command will allow you to download all query results. This
+command uses the same flags and arguments as the _search_. See below for an example:
 
 ```bash
 $ libgen download-all kubernetes
@@ -179,5 +188,3 @@ TO USE AT YOUR OWN RISK. Once again, ALL files available here are for EDUCATION 
 
 ## License
 - Apache License 2.0
-
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fciehanski%2Flibgen-cli.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fciehanski%2Flibgen-cli?ref=badge_large)

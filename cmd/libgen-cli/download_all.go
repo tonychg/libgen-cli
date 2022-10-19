@@ -5,7 +5,6 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
-//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,7 +49,7 @@ var downloadAllCmd = &cobra.Command{
 		if err != nil {
 			fmt.Printf("error getting require-author flag: %v\n", err)
 		}
-		extension, err := cmd.Flags().GetString("extension")
+		extension, err := cmd.Flags().GetStringSlice("extension")
 		if err != nil {
 			fmt.Printf("error getting extension flag: %v\n", err)
 		}
@@ -61,6 +60,14 @@ var downloadAllCmd = &cobra.Command{
 		year, err := cmd.Flags().GetInt("year")
 		if err != nil {
 			fmt.Printf("error getting output flag: %v\n", err)
+		}
+		publisher, err := cmd.Flags().GetString("publisher")
+		if err != nil {
+			fmt.Printf("error getting publisher flag: %v\n", err)
+		}
+		language, err := cmd.Flags().GetString("language")
+		if err != nil {
+			fmt.Printf("error getting language flag: %v\n", err)
 		}
 
 		// Join args for complete search query in case
@@ -75,6 +82,8 @@ var downloadAllCmd = &cobra.Command{
 			RequireAuthor: requireAuthor,
 			Extension:     extension,
 			Year:          year,
+			Publisher:     publisher,
+			Language:      language,
 		})
 		if err != nil {
 			fmt.Printf("error completing search query: %v\n", err)
@@ -91,7 +100,7 @@ var downloadAllCmd = &cobra.Command{
 			wg.Add(1)
 			bChan <- book
 			go func() {
-				if err := libgen.DownloadBook(<-bChan, output); err != nil {
+				if err := libgen.DownloadFile(<-bChan, output); err != nil {
 					fmt.Printf("error downloading %v: %v\n", book.Title, err)
 				}
 				wg.Done()
@@ -117,10 +126,14 @@ func init() {
 		"how many query results are displayed.")
 	downloadAllCmd.Flags().BoolP("require-author", "a", false, "controls if the query "+
 		"results will return any media without a listed author.")
-	downloadAllCmd.Flags().StringP("extension", "e", "", "controls if the query results "+
+	downloadAllCmd.Flags().StringSliceP("extension", "e", []string{""}, "controls if the query results "+
 		"will return any media with a certain file extension.")
 	downloadAllCmd.Flags().StringP("output", "o", "", "where you want libgen-cli to "+
 		"save your download.")
 	downloadAllCmd.Flags().IntP("year", "y", 0, "filters search query results by the "+
 		"year provided.")
+	downloadAllCmd.Flags().StringP("publisher", "p", "", "filters search query "+
+		"results by the publisher provided")
+	downloadAllCmd.Flags().StringP("language", "l", "", "filters search query "+
+		"results by the language provided")
 }

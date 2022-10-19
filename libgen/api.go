@@ -4,7 +4,6 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-//
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -49,6 +48,27 @@ type Book struct {
 	CoverURL    string
 	DownloadURL string
 	PageURL     string
+	Selected    bool
+}
+
+func (b *Book) getAuthor() string {
+	return b.Author
+}
+
+func (b *Book) getTitle() string {
+	return b.Title
+}
+
+func (b *Book) getExtension() string {
+	return b.Extension
+}
+
+func (b *Book) getDownloadURL() string {
+	return b.DownloadURL
+}
+
+func (b *Book) getDownloadType() string {
+	return "book"
 }
 
 // SearchOptions are the optional parameters available for the Search
@@ -59,9 +79,10 @@ type SearchOptions struct {
 	Results       int
 	Print         bool
 	RequireAuthor bool
-	Extension     string
+	Extension     []string
 	Year          int
 	Publisher     string
+	Language      string
 }
 
 // GetDetailsOptions are the optional parameters available for the GetDetails
@@ -71,9 +92,10 @@ type GetDetailsOptions struct {
 	SearchMirror  url.URL
 	Print         bool
 	RequireAuthor bool
-	Extension     string
+	Extension     []string
 	Year          int
 	Publisher     string
+	Language      string
 }
 
 // Search sends a query to the search.php page hosted by gen.lib.rus.ec(or any
@@ -100,7 +122,7 @@ func Search(options *SearchOptions) ([]*Book, error) {
 	q.Set("lg_topic", "libgen")
 	q.Set("open", "0")
 	q.Set("view", "simple")
-	q.Set("res", string(res))
+	q.Set("res", fmt.Sprint(res))
 	q.Set("phrase", "1")
 	q.Set("column", "def")
 	options.SearchMirror.RawQuery = q.Encode()
@@ -121,6 +143,7 @@ func Search(options *SearchOptions) ([]*Book, error) {
 		Extension:     options.Extension,
 		Year:          options.Year,
 		Publisher:     options.Publisher,
+		Language:      options.Language,
 	})
 	if err != nil {
 		return nil, err
@@ -157,8 +180,12 @@ func GetDetails(options *GetDetailsOptions) ([]*Book, error) {
 		if options.RequireAuthor && book.Author == "" {
 			continue
 		}
-		if options.Extension != "" && options.Extension != book.Extension {
-			continue
+		if len(options.Extension) > 0 {
+			for _, ext := range options.Extension {
+				if ext != book.Extension {
+					continue
+				}
+			}
 		}
 		if options.Year != 0 {
 			y, err := strconv.Atoi(book.Year)
@@ -170,7 +197,12 @@ func GetDetails(options *GetDetailsOptions) ([]*Book, error) {
 			}
 		}
 		if options.Publisher != "" {
-			if !strings.Contains(book.Publisher, options.Publisher) {
+			if !strings.Contains(strings.ToLower(book.Publisher), strings.ToLower(options.Publisher)) {
+				continue
+			}
+		}
+		if options.Language != "" {
+			if strings.ToLower(book.Language) != strings.ToLower(options.Language) {
 				continue
 			}
 		}
@@ -329,6 +361,12 @@ func parseResponse(response []byte) (*Book, error) {
 	return &book, nil
 }
 
+// printDetails prints the book details to the console.
+//
+//  @description: Prints the details of a book to the console.
+//  @param book Book object to print.
+//
+//  @return error
 func printDetails(book *Book) error {
 	var fsize string
 	size, err := strconv.Atoi(book.Filesize)
@@ -341,8 +379,8 @@ func printDetails(book *Book) error {
 	// Print separation lines
 	fmt.Println(strings.Repeat("-", 80))
 
-	// Print ID + Title
-	fTitle := fmt.Sprintf("%5s %s", color.New(color.FgHiBlue).Sprintf(book.ID), book.Title)
+	// Print Md5 + Title - JA
+	fTitle := fmt.Sprintf("%5s %s", color.New(color.FgHiBlue).Sprintf(book.Md5), book.Title)
 	fTitle = formatTitle(fTitle, TitleMaxLength)
 	if runtime.GOOS == "windows" {
 		_, err = fmt.Fprintf(color.Output, "%s\n    ++ ", fTitle)

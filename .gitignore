@@ -1,10 +1,11 @@
 .idea
 /idea/
-/cmd/libgen-cli/libgen
-libgen-cli
+#/cmd/libgen-cli/libgen
+#libgen-cli
 /libgen/test
 /libgen/libgen
 /libgen/libgen.test
 /libgen/mem.prof
 libgen-cli.exe
-cmd/libgen-cli/libgen
+#cmd/libgen-cli/libgen
+#libgen-cli
