@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/cheggaaa/pb/v3 v3.1.0
-	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
+	github.com/chzyer/readline v1.5.1
 	github.com/dustin/go-humanize v1.0.1-0.20200219035652-afde56e7acac
 	github.com/fatih/color v1.13.0
 	github.com/manifoldco/promptui v0.9.0
